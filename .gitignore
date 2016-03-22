@@ -1,0 +1,17 @@
+*.DS_Store
+release*
+debug*
+Makefile*
+*.pro.user
+*~
+*.qm
+*.log
+*.dll
+*.exe
+*.pdb
+*.pyc
+*.pyo
+*.o
+*.obj
+*.debug
+*.so
