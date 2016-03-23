@@ -1,0 +1,18 @@
+; Declares the module parameters for the DLL.
+
+
+EXPORTS
+  ; Explicit exports can go here
+  GetListPlugQtIface
+
+  ; Explicit exports can go here
+  ListLoad
+  ListLoadW
+  ListCloseWindow
+  ListGetDetectString
+;	ListSearchText
+;	ListSendCommand
+;	ListPrint
+;	ListNotificationReceived
+;	ListSetDefaultParams
+;	ListGetPreviewBitmap
