@@ -1,7 +1,7 @@
-#include "tcmdparentwindow.h"
+#include "parentwlxwindow.h"
 
 #include "core.h"
-#include "listplug_qt_iface.h"
+#include "wlx_interfaces.h"
 
 #include <QApplication>
 #include <QCloseEvent>
@@ -9,14 +9,14 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
-#if QT_VERSION >= 0x050000
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
 #include <QWindow>
 #define QT_WA(unicode, ansi) unicode
 #endif
 
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
-  TCmdParentWindow* tcmdWin = TCmdParentWindow::getByHandle(hWnd);
+  ParentWlxWindow* tcmdWin = ParentWlxWindow::getByHandle(hWnd);
   if (tcmdWin)
   {
     // choice of WndProc
@@ -66,7 +66,7 @@ static LRESULT CALLBACK DummyWndProc(HWND /*hWnd*/, UINT /*Msg*/, WPARAM /*wPara
   return S_OK;
 }
 
-TCmdParentWindow::TCmdParentWindow(const InterfaceKeeper& keeper, WId hParentWin) :
+ParentWlxWindow::ParentWlxWindow(const InterfaceKeeper& keeper, WId hParentWin) :
   QWidget(),
   m_keeper(keeper),
   m_keyboardExclusive(false),
@@ -89,7 +89,7 @@ TCmdParentWindow::TCmdParentWindow(const InterfaceKeeper& keeper, WId hParentWin
   setLayout(lay);
 }
 
-TCmdParentWindow::~TCmdParentWindow()
+ParentWlxWindow::~ParentWlxWindow()
 {
   releaseChild();
 
@@ -101,7 +101,7 @@ TCmdParentWindow::~TCmdParentWindow()
   m_origWndProc = NULL;
 }
 
-void TCmdParentWindow::setChildWindow(TCmdChildWindow* childWindow)
+void ParentWlxWindow::setChildWindow(IAbstractWlxWindow* childWindow)
 {
   releaseChild();
 
@@ -110,21 +110,16 @@ void TCmdParentWindow::setChildWindow(TCmdChildWindow* childWindow)
 
   layout()->addWidget(w);
 
-  connect(w, SIGNAL(setKeyboardExclusive(bool)),
-          this, SLOT(onSetKeyboardExclusive(bool)));
-  connect(w, SIGNAL(setListerOptions(int,int)),
-          this, SLOT(onSetListerOptions(int,int)));
-
   m_childWindow->initEmbedded();
 }
 
-TCmdParentWindow* TCmdParentWindow::getByHandle(HWND hwnd)
+ParentWlxWindow* ParentWlxWindow::getByHandle(HWND hwnd)
 {
    QWidget* p = (QWidget*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-   TCmdParentWindow* ptr = NULL;
+   ParentWlxWindow* ptr = NULL;
    try
    {
-     ptr = p ? qobject_cast<TCmdParentWindow*> (p) : NULL;
+     ptr = p ? qobject_cast<ParentWlxWindow*> (p) : NULL;
    }
    catch(...)
    {
@@ -134,7 +129,7 @@ TCmdParentWindow* TCmdParentWindow::getByHandle(HWND hwnd)
    return ptr;
 }
 
-void TCmdParentWindow::reloadWidget()
+void ParentWlxWindow::reloadWidget()
 {
   _assert(m_childWindow);
   if (m_childWindow)
@@ -143,7 +138,7 @@ void TCmdParentWindow::reloadWidget()
   }
 }
 
-void TCmdParentWindow::releaseChild()
+void ParentWlxWindow::releaseChild()
 {
   // clear layout
   while(layout()->count())
@@ -156,7 +151,7 @@ void TCmdParentWindow::releaseChild()
   m_childWindow = NULL;
 }
 
-void TCmdParentWindow::setNativeParent(WId hParentWin)
+void ParentWlxWindow::setNativeParent(WId hParentWin)
 {
   // make the widget window style be WS_CHILD so SetParent will work
   SetWindowLongPtr((HWND)winId(), GWL_STYLE,
@@ -165,8 +160,8 @@ void TCmdParentWindow::setNativeParent(WId hParentWin)
                    WS_CLIPSIBLINGS  /*|
                    WS_EX_NOPARENTNOTIFY*/);
 
-#if QT_VERSION >= 0x050000
-  QWindow *window = windowHandle();
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+  QWindow* window = windowHandle();
   window->setProperty("_q_embedded_native_parent_handle", hParentWin ? (WId)hParentWin : QVariant());
   SetParent((HWND)winId(), (HWND)hParentWin);
   window->setFlags(Qt::FramelessWindowHint);
@@ -178,26 +173,26 @@ void TCmdParentWindow::setNativeParent(WId hParentWin)
   QApplication::sendEvent(this, &e);
 }
 
-WId TCmdParentWindow::nativeParent() const
+WId ParentWlxWindow::nativeParent() const
 {
   return (WId)GetAncestor((HWND)winId(), GA_PARENT);
 }
 
-void TCmdParentWindow::showEvent(QShowEvent* e)
+void ParentWlxWindow::showEvent(QShowEvent* e)
 {
   QWidget::showEvent(e);
 
-  connect(m_firstShowTimer, &QTimer::timeout, this, &TCmdParentWindow::onFirstShowTimer);
+  connect(m_firstShowTimer, &QTimer::timeout, this, &ParentWlxWindow::onFirstShowTimer);
   m_firstShowTimer->start(200);
 }
 
-#if QT_VERSION >= 0x050000
-bool TCmdParentWindow::nativeEvent(const QByteArray &, void *message, long * /*result*/)
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+bool ParentWlxWindow::nativeEvent(const QByteArray&, void* message, long* /*result*/)
 #else
-bool MainWindow::winEvent(MSG *msg, long * result)
+bool ParentWlxWindow::winEvent(MSG* msg, long* /*result*/)
 #endif
 {
-#if QT_VERSION >= 0x050000
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
   MSG *msg = (MSG *)message;
 #endif
   if (msg->message == WM_DESTROY)
@@ -208,7 +203,7 @@ bool MainWindow::winEvent(MSG *msg, long * result)
   return false;
 }
 
-void TCmdParentWindow::onFirstShowTimer()
+void ParentWlxWindow::onFirstShowTimer()
 {
   WNDPROC proc = (WNDPROC)GetWindowLongPtr((HWND)winId(), GWLP_WNDPROC);
   if ( ( proc != m_origWndProc ) && ( ! m_listerWndProc ) )
@@ -222,7 +217,7 @@ void TCmdParentWindow::onFirstShowTimer()
   }
 }
 
-void TCmdParentWindow::onSetListerOptions(int itemtype, int value)
+void ParentWlxWindow::setListerOptions(int itemtype, int value) const
 {
   PostMessage((HWND)nativeParent(), WM_COMMAND, MAKELONG(value, itemtype),(LPARAM)winId());
 }

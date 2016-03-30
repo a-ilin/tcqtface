@@ -5,7 +5,7 @@
 #include <QFileInfo>
 
 #include "common.h"
-#include "listplug_qt_iface.h"
+#include "wlx_interfaces.h"
 
 // plugin loader
 QScopedPointer<LibraryLoader> g_pLibraryLoader;
@@ -36,19 +36,19 @@ struct Library
   Library() :
     iRef(NULL) {}
 
-  Library(ListPlugQtIface* ptr, QSharedPointer<LibraryHolder> hLib) :
-    pIface(QSharedPointer<ListPlugQtIface>(ptr, releaseIface)),
+  Library(IAbstractWlxPlugin* ptr, QSharedPointer<LibraryHolder> hLib) :
+    pIface(QSharedPointer<IAbstractWlxPlugin>(ptr, releaseIface)),
     pLib(hLib),
     iRef(NULL) {}
 
   bool isNull() const { return pIface.isNull(); }
 
-  QSharedPointer<ListPlugQtIface> pIface;
+  QSharedPointer<IAbstractWlxPlugin> pIface;
   QSharedPointer<LibraryHolder> pLib;
   mutable QAtomicInt iRef;
 
 private:
-  static void releaseIface(ListPlugQtIface* iface)
+  static void releaseIface(IAbstractWlxPlugin* iface)
   {
     delete iface;
   }
@@ -60,12 +60,12 @@ public:
   LibraryMap() :
     m_defLib(Library()) {}
 
-  ListPlugQtIface* iface(HMODULE hMod) const
+  IAbstractWlxPlugin* iface(HMODULE hMod) const
   {
     return lib(hMod)->pIface.data();
   }
 
-  Library* add(ListPlugQtIface* ptr, QSharedPointer<LibraryHolder> hLib)
+  Library* add(IAbstractWlxPlugin* ptr, QSharedPointer<LibraryHolder> hLib)
   {
     _assert(ptr);
     _assert( ! hLib.isNull() );
@@ -82,14 +82,21 @@ public:
     return &(m_libs.last());
   }
 
-  void ref(const ListPlugQtIface* iface)
+  void ref(const IAbstractWlxPlugin* iface)
   {
     ref(lib(iface));
   }
 
-  void deref(const ListPlugQtIface* iface)
+  void deref(const IAbstractWlxPlugin* iface)
   {
     deref(lib(iface));
+  }
+
+  bool isEmpty() const { return m_libs.isEmpty(); }
+
+  bool contains(HMODULE hMod) const
+  {
+    return lib(hMod) != &m_defLib;
   }
 
 private:
@@ -106,7 +113,7 @@ private:
     return &m_defLib;
   }
 
-  const Library* lib(const ListPlugQtIface* ptr) const
+  const Library* lib(const IAbstractWlxPlugin* ptr) const
   {
     for (int i = 0; i < m_libs.size(); ++i)
     {
@@ -172,6 +179,11 @@ LibraryLoader& LibraryLoader::i()
   return *g_pLibraryLoader;
 }
 
+bool LibraryLoader::isExists()
+{
+  return ! g_pLibraryLoader.isNull();
+}
+
 QString LibraryLoader::pathModule(void* handle)
 {
   TCHAR strPath[MAX_PATH + 1];
@@ -222,11 +234,11 @@ InterfaceKeeper LibraryLoader::keeper(void* addr)
 
   QSharedPointer<LibraryHolder> holder(new LibraryHolder(hDll));
 
-  ListPlugQtIface* iface = d->map.iface(hDll);
+  IAbstractWlxPlugin* iface = d->map.iface(hDll);
 
   if ( ! iface )
   { // doesn't exist, need create
-    PGetListPlugQtIface pFunc = (PGetListPlugQtIface)GetProcAddress(hDll, "GetListPlugQtIface");
+    GetWlxPluginFunc pFunc = (GetWlxPluginFunc)GetProcAddress(hDll, "GetWlxPlugin");
     _assert(pFunc);
     if ( ! pFunc )
     {
@@ -244,6 +256,20 @@ InterfaceKeeper LibraryLoader::keeper(void* addr)
   }
 
   return InterfaceKeeper(iface);
+}
+
+bool LibraryLoader::containsLibrary(void* addr) const
+{
+  Q_D(const LibraryLoader);
+
+  HMODULE hDll = (HMODULE)handle(addr, true);
+  return d->map.contains(hDll);
+}
+
+bool LibraryLoader::isEmpty() const
+{
+  Q_D(const LibraryLoader);
+  return d->map.isEmpty();
 }
 
 QString LibraryLoader::pathThis()
@@ -296,7 +322,7 @@ public:
     iface(NULL)
   {}
 
-  ListPlugQtIface* iface;
+  IAbstractWlxPlugin* iface;
 };
 
 
@@ -304,7 +330,7 @@ InterfaceKeeper::InterfaceKeeper():
   d_ptr(new InterfaceKeeperPrivate())
 {}
 
-InterfaceKeeper::InterfaceKeeper(ListPlugQtIface* iface) :
+InterfaceKeeper::InterfaceKeeper(IAbstractWlxPlugin* iface) :
   d_ptr(new InterfaceKeeperPrivate())
 {
   Q_D(InterfaceKeeper);
@@ -337,7 +363,7 @@ InterfaceKeeper::~InterfaceKeeper()
   delete d_ptr;
 }
 
-ListPlugQtIface* InterfaceKeeper::iface() const
+IAbstractWlxPlugin* InterfaceKeeper::iface() const
 {
   Q_D(const InterfaceKeeper);
   return d->iface;

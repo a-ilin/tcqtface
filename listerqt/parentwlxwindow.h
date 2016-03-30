@@ -3,31 +3,36 @@
 
 #include "common.h"
 #include "libraryloader.h"
+#include "wlx_interfaces.h"
 
 #include <QWidget>
 
 class QTimer;
-class TCmdChildWindow;
+class IAbstractWlxWindow;
 
-class TCmdParentWindow : public QWidget
+class ParentWlxWindow : public QWidget, public IParentWlxWindow
 {
   Q_OBJECT
 
 public:
-  TCmdParentWindow(const InterfaceKeeper& keeper, WId parentWin);
-  ~TCmdParentWindow();
+  ParentWlxWindow(const InterfaceKeeper& keeper, WId parentWin);
+  ~ParentWlxWindow();
 
-  void setChildWindow(TCmdChildWindow* childWindow);
-  TCmdChildWindow* childWindow() const { return m_childWindow; }
-
-  static TCmdParentWindow* getByHandle(HWND hwnd);
+  void setChildWindow(IAbstractWlxWindow* childWindow);
+  IAbstractWlxWindow* childWindow() const { return m_childWindow; }
 
   WNDPROC origWndProc() const { return m_origWndProc; }
   WNDPROC listerWndProc() const { return m_listerWndProc; }
 
-  bool isKeyboardExclusive() const { return m_keyboardExclusive; }
-
   void reloadWidget();
+
+  static ParentWlxWindow* getByHandle(HWND hwnd);
+
+public:
+  // IParentWlxWindow
+  void setKeyboardExclusive(bool enable) Q_DECL_OVERRIDE { m_keyboardExclusive = enable; }
+  bool isKeyboardExclusive() const Q_DECL_OVERRIDE { return m_keyboardExclusive; }
+  void setListerOptions(int itemtype, int value) const Q_DECL_OVERRIDE;
 
 protected:
   void releaseChild();
@@ -37,7 +42,7 @@ protected:
 
   void showEvent(QShowEvent *);
 
-#if QT_VERSION >= 0x050000
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
   bool nativeEvent(const QByteArray &eventType, void *message, long *result);
 #else
   bool winEvent(MSG *msg, long *result);
@@ -45,11 +50,6 @@ protected:
 
 protected slots:
   void onFirstShowTimer();
-  // enable full keyboard processing by the plugin if true
-  // otherwise keyboard events will be processed by Lister
-  void onSetKeyboardExclusive(bool enable) { m_keyboardExclusive = enable; }
-  // set Lister options (see TC docs, section WM_COMMAND)
-  void onSetListerOptions(int itemtype, int value);
 
 protected:
   InterfaceKeeper m_keeper;
@@ -60,7 +60,7 @@ protected:
   WNDPROC m_listerWndProc;
 
   QTimer* m_firstShowTimer;
-  TCmdChildWindow* m_childWindow;
+  IAbstractWlxWindow* m_childWindow;
 };
 
 #endif // TCMDPARENTWINDOW_H

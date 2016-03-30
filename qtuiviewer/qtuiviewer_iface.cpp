@@ -1,25 +1,25 @@
-#include <listplug_qt_iface.h>
+#include <wlx_interfaces.h>
 
 #include "mainwindow.h"
 
 #include <QXmlInputSource>
 #include <QXmlSimpleReader>
 
-class UiViewerListPlugQtIface : public ListPlugQtIface
+class UiViewerWlxPlugin : public IAbstractWlxPlugin
 {
 public:
 
-  TCmdChildWindow* createChildWindow(QWidget* parent)
+  IAbstractWlxWindow* createWindow(IParentWlxWindow* parent) const Q_DECL_OVERRIDE
   {
     return new MainWindow(parent);
   }
 
-  QString getDetectString()
+  QString getDetectString() const Q_DECL_OVERRIDE
   {
     return "EXT=\"UI\"";
   }
 
-  bool isFileAcceptable(const QString& fileName)
+  bool isFileAcceptable(const QString& fileName) const Q_DECL_OVERRIDE
   {
     if ( ! fileName.toLower().endsWith(".ui") )
     {
@@ -44,7 +44,7 @@ public:
 };
 
 
-ListPlugQtIface* GetListPlugQtIface()
+IAbstractWlxPlugin* GetWlxPlugin()
 {
-  return new UiViewerListPlugQtIface();
+  return new UiViewerWlxPlugin();
 }

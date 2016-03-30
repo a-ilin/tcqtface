@@ -1,6 +1,6 @@
 #include "common.h"
 #include "listplug.h"
-#include "listplug_qt_iface.h"
+#include "wlx_interfaces.h"
 
 #include "core.h"
 #include "libraryloader.h"
@@ -14,10 +14,28 @@
 
 #define KEEPER LibraryLoader::i().keeper(_ReturnAddress())
 
+class LibraryReleaser
+{
+public:
+  ~LibraryReleaser()
+  {
+    if (LibraryLoader::isExists())
+    {
+      LibraryLoader* lib = &LibraryLoader::i();
+      if (lib->isEmpty())
+      {
+        delete lib;
+      }
+    }
+  }
+};
+
 HWND CALLTYPE FUNC_WRAPPER_EXPORT(ListLoad)(HWND ParentWin, char* FileToLoad, int ShowFlags)
 {
   _log_line;
   CHECK_GLOBAL_ERROR(NULL);
+
+  LibraryReleaser libReleaser;
 
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
@@ -33,6 +51,8 @@ HWND CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadW)(HWND ParentWin, WCHAR* FileToLoad, 
   _log_line;
   CHECK_GLOBAL_ERROR(NULL);
 
+  LibraryReleaser libReleaser;
+
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
@@ -47,6 +67,8 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadNext)(HWND ParentWin, HWND PluginWin,
 {
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
+
+  LibraryReleaser libReleaser;
 
   _assert(Core::isExists());
   InterfaceKeeper keeper = KEEPER;
@@ -64,6 +86,8 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadNextW)(HWND ParentWin, HWND PluginWin,
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
 
+  LibraryReleaser libReleaser;
+
   _assert(Core::isExists());
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
@@ -79,6 +103,8 @@ void CALLTYPE FUNC_WRAPPER_EXPORT(ListCloseWindow)(HWND ListWin)
   _log_line;
   CHECK_GLOBAL_ERROR();
 
+  LibraryReleaser libReleaser;
+
   _assert(Core::isExists());
   InterfaceKeeper keeper = KEEPER;
   if (Core::isExists() && !keeper.isNull())
@@ -93,11 +119,13 @@ void CALLTYPE FUNC_WRAPPER_EXPORT(ListGetDetectString)(char* DetectString, int m
   _log_line;
   CHECK_GLOBAL_ERROR();
 
+  LibraryReleaser libReleaser;
+
   QString sDetect;
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    ListPlugQtIface* pIface = keeper.iface();
+    IAbstractWlxPlugin* pIface = keeper.iface();
     _assert(pIface);
     if ( pIface )
     {
@@ -124,6 +152,8 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchText) (HWND ListWin, char* SearchStri
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
 
+  LibraryReleaser libReleaser;
+
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
@@ -137,6 +167,8 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchTextW) (HWND ListWin, WCHAR* SearchSt
 {
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
+
+  LibraryReleaser libReleaser;
 
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
@@ -152,6 +184,8 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchDialog) (HWND ListWin, int FindNext)
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
 
+  LibraryReleaser libReleaser;
+
   _assert(Core::isExists());
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
@@ -166,6 +200,8 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListSendCommand) (HWND ListWin, int Command, in
 {
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
+
+  LibraryReleaser libReleaser;
 
   _assert(Core::isExists());
   InterfaceKeeper keeper = KEEPER;
@@ -191,6 +227,8 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListPrint) (HWND ListWin, char* FileToPrint, ch
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
 
+  LibraryReleaser libReleaser;
+
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
@@ -207,6 +245,8 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListPrintW) (HWND ListWin, WCHAR* FileToPrint, 
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
 
+  LibraryReleaser libReleaser;
+
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
@@ -221,6 +261,8 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListNotificationReceived)(HWND ListWin, int Mes
 {
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
+
+  LibraryReleaser libReleaser;
 
   _log(QString("ListWin: 0x%1, Message: 0x%2, wParam: 0x%3, lParam: 0x%4")
        .arg(QString::number((qint64)ListWin, 16))
@@ -239,12 +281,14 @@ void CALLTYPE FUNC_WRAPPER_EXPORT(ListSetDefaultParams)(ListDefaultParamStruct* 
   _log_line;
   CHECK_GLOBAL_ERROR();
 
+  LibraryReleaser libReleaser;
+
   _set_default_params(dps);
 
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    ListPlugQtIface* pIface = keeper.iface();
+    IAbstractWlxPlugin* pIface = keeper.iface();
     _assert(pIface);
     if ( pIface )
     {
@@ -259,7 +303,7 @@ static HBITMAP listGetPreviewBitmap(const InterfaceKeeper& keeper, const QString
 {
   QPixmap pixmap;
 
-  ListPlugQtIface* pIface = keeper.iface();
+  IAbstractWlxPlugin* pIface = keeper.iface();
   _assert(pIface);
   if ( pIface )
   {
@@ -275,6 +319,8 @@ HBITMAP CALLTYPE FUNC_WRAPPER_EXPORT(ListGetPreviewBitmap)(char* FileToLoad,int 
 {
   _log_line;
   CHECK_GLOBAL_ERROR(NULL);
+
+  LibraryReleaser libReleaser;
 
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
@@ -292,6 +338,8 @@ HBITMAP CALLTYPE FUNC_WRAPPER_EXPORT(ListGetPreviewBitmapW)(WCHAR* FileToLoad,in
   _log_line;
   CHECK_GLOBAL_ERROR(NULL);
 
+  LibraryReleaser libReleaser;
+
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
@@ -302,4 +350,15 @@ HBITMAP CALLTYPE FUNC_WRAPPER_EXPORT(ListGetPreviewBitmapW)(WCHAR* FileToLoad,in
   return NULL;
 }
 
-
+// can WLX plugin be unloaded
+int CALLTYPE FUNC_WRAPPER_EXPORT(GetUnloadableStatus)()
+{
+  if ( LibraryLoader::isExists() )
+  {
+    return LibraryLoader::i().containsLibrary(_ReturnAddress()) ? 0 : 1;
+  }
+  else
+  {
+    return 1;
+  }
+}

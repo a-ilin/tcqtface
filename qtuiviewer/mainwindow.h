@@ -1,25 +1,17 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QWidget>
-#include <listplug_qt_iface.h>
+#include <wlx_interfaces.h>
 
-class MainWindow : public QWidget, public TCmdChildWindow
+class MainWindow : public QWidget, public IAbstractWlxWindow
 {
   Q_OBJECT
 
 public:
-  MainWindow(QWidget* parent);
-  ~MainWindow();
+  MainWindow(IParentWlxWindow* parent);
 
-  void initEmbedded();
-
-  int loadFile(const QString& file, int showFlags);
-  void reload();
-
-signals:
-  // sets exclusive keyboard input (no keyboard events to Lister will be propagated)
-  void setKeyboardExclusive(bool);
+  int loadFile(const QString& file, int showFlags) Q_DECL_OVERRIDE;
+  void reload() Q_DECL_OVERRIDE;
 
 protected:
   QString m_filePath;

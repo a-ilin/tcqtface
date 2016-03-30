@@ -97,3 +97,9 @@ HBITMAP CALLTYPE FUNC_WRAPPER_EXPORT(ListGetPreviewBitmapW)(WCHAR* FileToLoad,in
                                                     contentbuf, contentbuflen);
 }
 #endif // PLUG_LIST_PREVIEW_BITMAP
+
+
+int CALLTYPE FUNC_WRAPPER_EXPORT(GetUnloadableStatus)()
+{
+  return FUNC_WRAPPER_IMPORT(GetUnloadableStatus)();
+}

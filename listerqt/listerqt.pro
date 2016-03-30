@@ -12,7 +12,7 @@ LIBS += -luser32
 
 SOURCES += \
   listplug.cpp \
-  tcmdparentwindow.cpp \
+  parentwlxwindow.cpp \
   libraryloader.cpp \
   application.cpp \
   seexception.cpp \
@@ -22,8 +22,8 @@ SOURCES += \
 
 HEADERS += \
   listplug.h \
-  listplug_qt_iface.h \
-  tcmdparentwindow.h \
+  wlx_interfaces.h \
+  parentwlxwindow.h \
   common.h \
   libraryloader.h \
   application.h \
@@ -37,7 +37,7 @@ HEADERS += \
 distrib.files = \
   listerqt.pri \
   listerqt.cpp \
-  listplug_qt_iface.h \
+  wlx_interfaces.h \
   listplug.h
 
 INSTALLS += \

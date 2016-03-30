@@ -89,7 +89,7 @@ void _set_default_params(ListDefaultParamStruct* dps)
 AppSet::AppSet() :
   QSettings(g_setFileName, QSettings::IniFormat)
 {
-  beginGroup("ListerQt");
+  beginGroup("qtface");
 }
 
 void _assert_ex_helper(const QString& str)

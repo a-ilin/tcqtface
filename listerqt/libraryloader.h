@@ -3,19 +3,19 @@
 
 #include <QScopedPointer>
 
-class ListPlugQtIface;
+class IAbstractWlxPlugin;
 
 class InterfaceKeeperPrivate;
 class InterfaceKeeper
 {
 public:
   InterfaceKeeper();
-  InterfaceKeeper(ListPlugQtIface* iface);
+  InterfaceKeeper(IAbstractWlxPlugin* iface);
   InterfaceKeeper(const InterfaceKeeper& other);
 
   ~InterfaceKeeper();
 
-  ListPlugQtIface* iface() const;
+  IAbstractWlxPlugin* iface() const;
   bool isNull() const;
 
   bool operator== (const InterfaceKeeper& other) const;
@@ -38,7 +38,15 @@ public:
   // get plugin interface for module that contains addr
   InterfaceKeeper keeper(void* addr);
 
+  // returns if library contains a module handle specified by addr
+  bool containsLibrary(void* addr) const;
+
+  // returns if the library loader map is empty
+  bool isEmpty() const;
+
   static LibraryLoader& i();
+
+  static bool isExists();
 
   // path to module
   static QString pathModule(void* handle);

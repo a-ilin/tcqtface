@@ -92,9 +92,9 @@ QString ProxyWidget::load(const QString& filePath)
 }
 
 
-MainWindow::MainWindow(QWidget* parent) :
-  QWidget(parent),
-  TCmdChildWindow(),
+MainWindow::MainWindow(IParentWlxWindow* parent) :
+  QWidget(parent->widget()),
+  IAbstractWlxWindow(),
   m_showFlags(0)
 {
   QGridLayout* lay = new QGridLayout(this);
@@ -105,16 +105,8 @@ MainWindow::MainWindow(QWidget* parent) :
   QPalette pal = palette();
   pal.setBrush(QPalette::Window, QBrush(Qt::white));
   setPalette(pal);
-}
 
-MainWindow::~MainWindow()
-{
-
-}
-
-void MainWindow::initEmbedded()
-{
-  emit setKeyboardExclusive(true);
+  parent->setKeyboardExclusive(true);
 }
 
 int MainWindow::loadFile(const QString& file, int showFlags)

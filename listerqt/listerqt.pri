@@ -55,6 +55,6 @@ CORE_LIB_NAME = $$coreName(listerqt)
     TARGET_EXT = ".wlx"
   }
 
-  HEADERS += $$PWD/listplug_qt_iface.h
+  HEADERS += $$PWD/wlx_interfaces.h
   SOURCES += $$PWD/listerqt.cpp
 }

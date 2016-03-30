@@ -24,6 +24,9 @@
                                    CALLTYPE_IMPORT(func, ret) param;
 
 
+// internal
+FUNC_DUP(int, GetUnloadableStatus, ())
+
 
 /* Contents of file listplug.h */
 
@@ -91,6 +94,4 @@ FUNC_DUP(HBITMAP, ListGetPreviewBitmapW, (WCHAR* FileToLoad,int width,int height
     char* contentbuf,int contentbuflen))
 
 
-
 #endif // LISTPLUG_H
-

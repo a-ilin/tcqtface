@@ -56,7 +56,7 @@ public:
 public:
   QScopedPointer<QObject> m_pWinManager;
   HANDLE m_hSemApp;   // sync app create/destroy
-  QSet<TCmdParentWindow*> m_winSet; // all active windows
+  QSet<ParentWlxWindow*> m_winSet; // all active windows
 
   QSet<AtomicMutex*> m_pendingMutexes; // pending mutexes
   int m_iRecursionLevel;
@@ -106,14 +106,14 @@ protected:
   static void destroyEvent(QEvent* e);
   static void postEvents(QEvent* e);
 
-  static void customWindowEvent(QEvent* e, int(*f)(QEvent*, TCmdParentWindow*));
+  static void customWindowEvent(QEvent* e, int(*f)(QEvent*, ParentWlxWindow*));
 
   // custom events
-  static int loadFile(QEvent* e, TCmdParentWindow* parent);
-  static int searchDialog(QEvent* e, TCmdParentWindow* parent);
-  static int print(QEvent* e, TCmdParentWindow* parent);
-  static int sendCommand(QEvent* e, TCmdParentWindow* parent);
-  static int searchText(QEvent* e, TCmdParentWindow* parent);
+  static int loadFile(QEvent* e, ParentWlxWindow* parent);
+  static int searchDialog(QEvent* e, ParentWlxWindow* parent);
+  static int print(QEvent* e, ParentWlxWindow* parent);
+  static int sendCommand(QEvent* e, ParentWlxWindow* parent);
+  static int searchText(QEvent* e, ParentWlxWindow* parent);
 };
 
 class Event : public QEvent
@@ -130,18 +130,18 @@ class EventWindowCreate : public Event
 {
 public:
   EventWindowCreate(const InterfaceKeeper& _keeper,
-                    HWND _hParentWin,
+                    HWND _hListerWin,
                     const QString& _sFilePath,
                     int _iShowFlags,
                     HWND* _hChildWin,
-                    TCmdParentWindow** _pChildWin);
+                    ParentWlxWindow** _pWin);
 
   InterfaceKeeper keeper;
-  HWND hParentWin;
+  HWND hListerWin;
   QString sFilePath;
   int iShowFlags;
-  HWND* hChildWin;
-  TCmdParentWindow** pChildwin;
+  HWND* hWin;
+  ParentWlxWindow** pWin;
 };
 
 // Qt Event used to create windows
@@ -150,11 +150,11 @@ class EventWindowDestroy : public Event
 public:
   EventWindowDestroy(const InterfaceKeeper& _keeper,
                      HWND _hDestroyWin,
-                     TCmdParentWindow** _pChildwin);
+                     ParentWlxWindow** _pWin);
 
   InterfaceKeeper keeper;
   HWND hDestroyWin;
-  TCmdParentWindow** pChildwin;
+  ParentWlxWindow** pWin;
 };
 
 // Qt Event used to process main QEventLoop

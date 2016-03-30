@@ -3,9 +3,9 @@
 
 #include "application.h"
 #include "atomicmutex.h"
-#include "listplug_qt_iface.h"
+#include "wlx_interfaces.h"
 #include "seexception.h"
-#include "tcmdparentwindow.h"
+#include "parentwlxwindow.h"
 
 #include <QCoreApplication>
 #include <QThread>
@@ -249,7 +249,7 @@ HWND CorePrivate::createWindow(const InterfaceKeeper& keeper,
                                const QString& sFilePath,
                                int iShowFlags)
 {
-  ListPlugQtIface* iface = keeper.iface();
+  IAbstractWlxPlugin* iface = keeper.iface();
   _assert(iface);
   if ( ! iface )
   {
@@ -270,7 +270,7 @@ HWND CorePrivate::createWindow(const InterfaceKeeper& keeper,
   }
 
   HWND hChildWin = NULL;
-  TCmdParentWindow* pChildWin = NULL;
+  ParentWlxWindow* pChildWin = NULL;
 
   processEvent(new EventWindowCreate(keeper, hParentWin, sFilePath,
                                      iShowFlags, &hChildWin, &pChildWin));
@@ -288,7 +288,7 @@ HWND CorePrivate::createWindow(const InterfaceKeeper& keeper,
 
 void CorePrivate::destroyWindow(const InterfaceKeeper& keeper, HWND hWin)
 {
-  TCmdParentWindow* pChildwin = NULL;
+  ParentWlxWindow* pChildwin = NULL;
   processEvent(new EventWindowDestroy(keeper, hWin, &pChildwin));
 
   _assert(pChildwin);
@@ -521,7 +521,7 @@ void WinManager::createEvent(QEvent* e)
   EventWindowCreate* ewm = static_cast<EventWindowCreate*> (e);
 
   InterfaceKeeper& keeper = ewm->keeper;
-  ListPlugQtIface* iface = keeper.iface();
+  IAbstractWlxPlugin* iface = keeper.iface();
   _assert(iface);
   if ( ! iface )
   {
@@ -529,28 +529,27 @@ void WinManager::createEvent(QEvent* e)
   }
 
   // create new window
-  TCmdParentWindow* pTcmdParentWnd = new TCmdParentWindow(keeper, (WId)ewm->hParentWin);
-  TCmdChildWindow* pTcmdChildWnd = iface->createChildWindow(pTcmdParentWnd);
-  _assert(pTcmdChildWnd && pTcmdChildWnd->widget());
+  ParentWlxWindow* parent = new ParentWlxWindow(keeper, (WId)ewm->hListerWin);
+  IAbstractWlxWindow* child = iface->createWindow(parent);
+  _assert(child && child->widget());
 
-  if (pTcmdChildWnd &&
-      pTcmdChildWnd->widget() &&
-      (pTcmdChildWnd->loadFile(ewm->sFilePath, ewm->iShowFlags) == LISTPLUGIN_OK))
+  if (child && child->widget() &&
+      (child->loadFile(ewm->sFilePath, ewm->iShowFlags) == LISTPLUGIN_OK))
   {
-    *(ewm->hChildWin) = (HWND)pTcmdParentWnd->winId();
-    *(ewm->pChildwin) = pTcmdParentWnd;
-    pTcmdParentWnd->setChildWindow(pTcmdChildWnd);
-    pTcmdParentWnd->show();
+    *(ewm->hWin) = (HWND)parent->winId();
+    *(ewm->pWin) = parent;
+    parent->setChildWindow(child);
+    parent->show();
 
-    _log(QString("Window created. Parent: 0x") + QString::number((quint64)pTcmdParentWnd, 16)
-         + QString(", HWND: 0x") + QString::number((quint64)pTcmdParentWnd->winId(), 16));
+    _log(QString("Window created. Parent: 0x") + QString::number((quint64)parent, 16)
+         + QString(", HWND: 0x") + QString::number((quint64)parent->winId(), 16));
   }
   else
   {
     _log("Window was NOT created!");
 
-    delete pTcmdChildWnd;
-    delete pTcmdParentWnd;
+    delete child;
+    delete parent;
   }
 }
 
@@ -562,16 +561,16 @@ void WinManager::destroyEvent(QEvent* e)
   _assert(ewm->hDestroyWin != NULL);
   if (ewm->hDestroyWin != NULL)
   { // destroy existing window synchronously
-    TCmdParentWindow* pTcmdParentWnd = TCmdParentWindow::getByHandle(ewm->hDestroyWin);
-    _assert(pTcmdParentWnd);
-    if (pTcmdParentWnd)
+    ParentWlxWindow* parent = ParentWlxWindow::getByHandle(ewm->hDestroyWin);
+    _assert(parent);
+    if (parent)
     {
-      _log(QString("Window destroyed. Parent: 0x") + QString::number((quint64)pTcmdParentWnd, 16)
-           + QString(", HWND: 0x") + QString::number((quint64)pTcmdParentWnd->winId(), 16));
+      _log(QString("Window destroyed. Parent: 0x") + QString::number((quint64)parent, 16)
+           + QString(", HWND: 0x") + QString::number((quint64)parent->winId(), 16));
 
-      pTcmdParentWnd->close();
+      parent->close();
 
-      *(ewm->pChildwin) = pTcmdParentWnd;
+      *(ewm->pWin) = parent;
     }
   }
 }
@@ -583,14 +582,14 @@ void WinManager::postEvents(QEvent* e)
   QCoreApplication::sendPostedEvents();
 }
 
-void WinManager::customWindowEvent(QEvent* e, int(*f)(QEvent*, TCmdParentWindow*))
+void WinManager::customWindowEvent(QEvent* e, int(*f)(QEvent*, ParentWlxWindow*))
 {
   EventWindowCustomCommand* ewm = static_cast<EventWindowCustomCommand*> (e);
 
   _assert(ewm->hWin != NULL);
   if (ewm->hWin != NULL)
   {
-    TCmdParentWindow* pTcmdParentWnd = TCmdParentWindow::getByHandle(ewm->hWin);
+    ParentWlxWindow* pTcmdParentWnd = ParentWlxWindow::getByHandle(ewm->hWin);
     _assert(pTcmdParentWnd);
     if (pTcmdParentWnd)
     {
@@ -599,21 +598,21 @@ void WinManager::customWindowEvent(QEvent* e, int(*f)(QEvent*, TCmdParentWindow*
   }
 }
 
-int WinManager::loadFile(QEvent* e, TCmdParentWindow* parent)
+int WinManager::loadFile(QEvent* e, ParentWlxWindow* parent)
 {
   _assert(e->type() == EventCustomLoadFileType);
   EventCustomLoadFile* ewm = static_cast<EventCustomLoadFile*> (e);
   return parent->childWindow()->loadFile(ewm->sFilePath, ewm->iShowFlags);
 }
 
-int WinManager::searchDialog(QEvent* e, TCmdParentWindow* parent)
+int WinManager::searchDialog(QEvent* e, ParentWlxWindow* parent)
 {
   _assert(e->type() == EventCustomSearchDialogType);
   EventCustomSearchDialog* ewm = static_cast<EventCustomSearchDialog*> (e);
   return parent->childWindow()->searchDialog(ewm->iFindNext);
 }
 
-int WinManager::print(QEvent* e, TCmdParentWindow* parent)
+int WinManager::print(QEvent* e, ParentWlxWindow* parent)
 {
   _assert(e->type() == EventCustomPrintType);
   EventCustomPrint* ewm = static_cast<EventCustomPrint*> (e);
@@ -621,14 +620,14 @@ int WinManager::print(QEvent* e, TCmdParentWindow* parent)
                                       ewm->iPrintFlags, ewm->mMargins);
 }
 
-int WinManager::sendCommand(QEvent* e, TCmdParentWindow* parent)
+int WinManager::sendCommand(QEvent* e, ParentWlxWindow* parent)
 {
   _assert(e->type() == EventCustomSendCommandType);
   EventCustomSendCommand* ewm = static_cast<EventCustomSendCommand*> (e);
   return parent->childWindow()->sendCommand(ewm->iCommand, ewm->iParameter);
 }
 
-int WinManager::searchText(QEvent* e, TCmdParentWindow* parent)
+int WinManager::searchText(QEvent* e, ParentWlxWindow* parent)
 {
   _assert(e->type() == EventCustomSearchTextType);
   EventCustomSearchText* ewm = static_cast<EventCustomSearchText*> (e);
@@ -637,27 +636,27 @@ int WinManager::searchText(QEvent* e, TCmdParentWindow* parent)
 
 
 EventWindowCreate::EventWindowCreate(const InterfaceKeeper& _keeper,
-                                     HWND _hParentWin,
+                                     HWND _hListerWin,
                                      const QString& _sFilePath,
                                      int _iShowFlags,
                                      HWND* _hChildWin,
-                                     TCmdParentWindow** _pChildWin) :
+                                     ParentWlxWindow** _pWin) :
   Event(EventWindowCreateType),
   keeper(_keeper),
-  hParentWin(_hParentWin),
+  hListerWin(_hListerWin),
   sFilePath(_sFilePath),
   iShowFlags(_iShowFlags),
-  hChildWin(_hChildWin),
-  pChildwin(_pChildWin)
+  hWin(_hChildWin),
+  pWin(_pWin)
 {}
 
 EventWindowDestroy::EventWindowDestroy(const InterfaceKeeper& _keeper,
                                        HWND _hDestroyWin,
-                                       TCmdParentWindow** _pChildwin) :
+                                       ParentWlxWindow** _pWin) :
   Event(EventWindowDestroyType),
   keeper(_keeper),
   hDestroyWin(_hDestroyWin),
-  pChildwin(_pChildwin)
+  pWin(_pWin)
 {}
 
 

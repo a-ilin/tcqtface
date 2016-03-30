@@ -9,7 +9,7 @@ class QEvent;
 
 class CorePrivate;
 class InterfaceKeeper;
-class TCmdParentWindow;
+class ParentWlxWindow;
 
 class Core
 {
