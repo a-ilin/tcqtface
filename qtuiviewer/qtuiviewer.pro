@@ -13,21 +13,36 @@ TARGET = qtuiviewer
 
 TEMPLATE = lib
 
-# Architecture
-contains(QMAKE_TARGET.arch, x86_64): {
-  ARCH = x64
-} else {
-  ARCH = x86
+
+# No text search available
+#DEFINES += PLUG_LIST_SEARCH_TEXT
+# No preview available
+#DEFINES += PLUG_LIST_PREVIEW_BITMAP
+
+isEmpty(TCQTFACE_PATH) {
+error(Specify TCQTFACE_PATH variable!)
 }
 
-DESTDIR = $$PWD/../../dist/$${ARCH}/
-
-include($$DESTDIR/listerqt.pri)
+include($$TCQTFACE_PATH/listerqt.pri)
 
 SOURCES += \
-    mainwindow.cpp \
-    qtuiviewer_iface.cpp
+  mainwindow.cpp \
+  qtuiviewer_iface.cpp
 
 HEADERS += \
-    mainwindow.h
+  mainwindow.h
 
+
+! isEmpty(INSTALL_PATH) {
+distrib.files = \
+  pluginst.inf
+
+INSTALLS += \
+  target \
+  distrib
+
+for (dist, INSTALLS) {
+  $${dist}.path = $$INSTALL_PATH
+}
+
+}
