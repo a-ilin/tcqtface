@@ -8,9 +8,12 @@
 
 #include <QApplication>
 #include <QFile>
-#include <QFrame>
 #include <QLabel>
 #include <QMessageBox>
+#include <QPainter>
+#include <QPrintDialog>
+#include <QPrinter>
+#include <QPrinterInfo>
 #include <QSpacerItem>
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -36,16 +39,9 @@ static void clearLayout(QLayout *layout)
     }
 }
 
-class ProxyWidget : public QFrame
-{
-public:
-  ProxyWidget(QWidget* parent);
-
-  QString load(const QString& filePath);
-};
-
-ProxyWidget::ProxyWidget(QWidget* parent) :
-  QFrame(parent)
+ProxyWidget::ProxyWidget(QWidget* parent)
+  : QFrame(parent)
+  , m_uiWidget(NULL)
 {
   QVBoxLayout* lay = new QVBoxLayout(this);
   lay->setContentsMargins(0,0,0,0);
@@ -71,17 +67,17 @@ QString ProxyWidget::load(const QString& filePath)
 
   QFile file(filePath);
   file.open(QFile::ReadOnly);
-  QWidget* uiWidget = uiLoader.load(&file, this);
+  m_uiWidget = uiLoader.load(&file, this);
   file.close();
 
   QString error = uiLoader.errorString();
 
-  if (uiWidget)
+  if (m_uiWidget)
   {
-    uiWidget->setWindowFlags(Qt::Widget);
-    uiWidget->setParent(this);
-    uiWidget->show();
-    layout()->addWidget(uiWidget);
+    m_uiWidget->setWindowFlags(Qt::Widget);
+    m_uiWidget->setParent(this);
+    m_uiWidget->show();
+    layout()->addWidget(m_uiWidget);
   }
   else if (error.isEmpty())
   {
@@ -124,8 +120,8 @@ void MainWindow::reload()
   // clear
   clearLayout(lay);
 
-  ProxyWidget* proxy = new ProxyWidget(this);
-  QString error = proxy->load(m_filePath);
+  m_proxy = new ProxyWidget(this);
+  QString error = m_proxy->load(m_filePath);
 
   int layoutRow = 0;
 
@@ -141,7 +137,7 @@ void MainWindow::reload()
     lay->addWidget(errLbl, layoutRow++, 0);
   }
 
-  lay->addWidget(proxy, layoutRow, 0);
+  lay->addWidget(m_proxy, layoutRow, 0);
   // horizontal spacer
   lay->addItem(new QSpacerItem(0, 0, QSizePolicy::MinimumExpanding, QSizePolicy::Minimum), layoutRow, 1);
 
@@ -151,3 +147,51 @@ void MainWindow::reload()
   lay->addItem(new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::MinimumExpanding), layoutRow, 0);
 }
 
+int MainWindow::print(const QString& /*file*/, const QString& printerName, int /*flags*/, const QMarginsF& margins)
+{
+  QPixmap pix;
+  if (m_proxy && m_proxy->uiWidget())
+  {
+    pix = m_proxy->uiWidget()->grab();
+  }
+
+  if ( pix.isNull() )
+  {
+    QMessageBox::information(this, tr("Nothing to print"), tr("No file is loaded"));
+    return LISTPLUGIN_ERROR;
+  }
+
+  QPrinterInfo printInfo;
+  QList<QPrinterInfo> infos = QPrinterInfo::availablePrinters();
+  for (const QPrinterInfo& info : infos)
+  {
+    if (info.printerName() == printerName)
+    {
+      printInfo = info;
+    }
+  }
+
+  QPrinter printer(printInfo);
+  printer.setPageMargins(margins);
+
+  QPrintDialog d(&printer, this);
+
+  if ( ! d.exec() )
+  {
+    return LISTPLUGIN_ERROR;
+  }
+
+  QPainter painter(&printer);
+
+  double xscale = double(printer.pageRect().width()) / double(pix.width());
+  double yscale = double(printer.pageRect().height()) / double(pix.height());
+  double scale = std::min(xscale, yscale);
+  painter.translate(printer.paperRect().x() + printer.pageRect().width()/2,
+                     printer.paperRect().y() + printer.pageRect().height()/2);
+  painter.scale(scale, scale);
+  painter.translate(-pix.width()/2, -pix.height()/2);
+
+  painter.drawPixmap(QPoint(0,0), pix);
+
+  return LISTPLUGIN_OK;
+}

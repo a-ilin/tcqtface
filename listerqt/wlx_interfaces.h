@@ -82,7 +82,7 @@ public:
 
   // see TC Lister Plugin docs for description of those
 
-  virtual int print(const QString& file, const QString& printer, int flags, const QMargins& margins)
+  virtual int print(const QString& file, const QString& printer, int flags, const QMarginsF& margins)
   { Q_UNUSED(file); Q_UNUSED(printer); Q_UNUSED(flags); Q_UNUSED(margins); return LISTPLUGIN_ERROR; }
 
   virtual int searchText(const QString& str, int searchParameter)

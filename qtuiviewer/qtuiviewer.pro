@@ -1,4 +1,4 @@
-QT += core gui widgets xml
+QT += core gui printsupport widgets xml
 
 # Designer uses shared linking while uitools uses static
 DEFINES += USE_DESIGNER

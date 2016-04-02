@@ -374,7 +374,7 @@ int listPrint(HWND ListWin, const QString& FileToPrint, const QString& DefPrinte
   auto payload = createCorePayload([&]()
   {
     ParentWlxWindow* parent = ParentWlxWindow::getByHandle(ListWin);
-    QMargins margins(Margins->left, Margins->top, Margins->right, Margins->bottom);
+    QMarginsF margins(Margins->left, Margins->top, Margins->right, Margins->bottom);
     result = parent->childWindow()->print(FileToPrint, DefPrinter, PrintFlags, margins);
   });
 
