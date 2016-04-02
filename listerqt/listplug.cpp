@@ -4,9 +4,11 @@
 
 #include "core.h"
 #include "libraryloader.h"
+#include "parentwlxwindow.h"
 
 #include <stdio.h>
 #include <intrin.h>
+#include <memory>
 
 #include <QtWin>
 
@@ -30,6 +32,72 @@ public:
   }
 };
 
+HWND createWindow(const InterfaceKeeper& keeper, HWND hLister, const QString& fileName, int flags)
+{
+  IAbstractWlxPlugin* iface = keeper.iface();
+  _assert(iface);
+  if ( ! iface )
+  {
+    return NULL;
+  }
+
+  if ( ! iface->isFileAcceptable(fileName) )
+  {
+    _log(QString("File not acceptable: ") + fileName);
+    return NULL;
+  }
+
+  Core* core = &Core::i();
+
+  HWND hWnd = NULL;
+  ParentWlxWindow* pWnd = NULL;
+
+  auto payload = createCorePayloadEx(
+  [&]() -> bool
+  { // initialize QApplication if needed
+    return core->startApplication();
+  },
+  [&]()
+  {
+    std::unique_ptr<ParentWlxWindow> parent(new ParentWlxWindow(keeper, (WId)hLister));
+    std::unique_ptr<IAbstractWlxWindow> iwlx(iface->createWindow(parent.get()));
+    _assert(iwlx && iwlx->widget());
+
+    if (iwlx && iwlx->widget() && (iwlx->loadFile(fileName, flags) == LISTPLUGIN_OK))
+    {
+      parent->setChildWindow(iwlx.get());
+      parent->show();
+
+      _log(QString("Window created. Parent: 0x") + QString::number((quint64)parent.get(), 16)
+           + QString(", HWND: 0x") + QString::number((quint64)parent->winId(), 16));
+
+      hWnd = (HWND)parent->winId();
+      pWnd = parent.release();
+      iwlx.release();
+    }
+    else
+    {
+      _log("Window was NOT created!");
+    }
+  },
+  [&]()
+  {
+    if (hWnd)
+    {
+      core->increaseWinCounter();
+    }
+  });
+
+  core->processPayload(payload);
+
+  if (core->isUnusable())
+  {
+    delete core;
+  }
+
+  return hWnd;
+}
+
 HWND CALLTYPE FUNC_WRAPPER_EXPORT(ListLoad)(HWND ParentWin, char* FileToLoad, int ShowFlags)
 {
   _log_line;
@@ -40,7 +108,7 @@ HWND CALLTYPE FUNC_WRAPPER_EXPORT(ListLoad)(HWND ParentWin, char* FileToLoad, in
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    return Core::i().createWindow(keeper, ParentWin, _toString(FileToLoad), ShowFlags);
+    return createWindow(keeper, ParentWin, _toString(FileToLoad), ShowFlags);
   }
 
   return NULL;
@@ -56,15 +124,33 @@ HWND CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadW)(HWND ParentWin, WCHAR* FileToLoad, 
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    return Core::i().createWindow(KEEPER, ParentWin, _toString(FileToLoad), ShowFlags);
+    return createWindow(KEEPER, ParentWin, _toString(FileToLoad), ShowFlags);
   }
 
   return NULL;
 }
 
+static int listLoadNext(HWND PluginWin, const QString& FileToLoad, int ShowFlags)
+{
+  _assert(Core::isExists());
+  int result = LISTPLUGIN_ERROR;
+
+  auto payload = createCorePayload([&]()
+  {
+    ParentWlxWindow* parent = ParentWlxWindow::getByHandle(PluginWin);
+    result = parent->childWindow()->loadFile(FileToLoad, ShowFlags);
+  });
+
+  Core::i().processPayload(payload);
+
+  return result;
+}
+
 int CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadNext)(HWND ParentWin, HWND PluginWin,
                                                char* FileToLoad, int ShowFlags)
 {
+  Q_UNUSED(ParentWin);
+
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
 
@@ -74,7 +160,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadNext)(HWND ParentWin, HWND PluginWin,
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    return Core::i().loadFile(KEEPER, ParentWin, PluginWin, _toString(FileToLoad), ShowFlags);
+    return listLoadNext(PluginWin, _toString(FileToLoad), ShowFlags);
   }
 
   return LISTPLUGIN_ERROR;
@@ -83,6 +169,8 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadNext)(HWND ParentWin, HWND PluginWin,
 int CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadNextW)(HWND ParentWin, HWND PluginWin,
                                                 WCHAR* FileToLoad, int ShowFlags)
 {
+  Q_UNUSED(ParentWin);
+
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
 
@@ -92,24 +180,58 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadNextW)(HWND ParentWin, HWND PluginWin,
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    return Core::i().loadFile(KEEPER, ParentWin, PluginWin, _toString(FileToLoad), ShowFlags);
+    return listLoadNext(PluginWin, _toString(FileToLoad), ShowFlags);
   }
 
   return LISTPLUGIN_ERROR;
 }
 
-void CALLTYPE FUNC_WRAPPER_EXPORT(ListCloseWindow)(HWND ListWin)
+void CALLTYPE FUNC_WRAPPER_EXPORT(ListCloseWindow)(HWND hWnd)
 {
   _log_line;
   CHECK_GLOBAL_ERROR();
 
   LibraryReleaser libReleaser;
 
+  _assert(hWnd);
   _assert(Core::isExists());
   InterfaceKeeper keeper = KEEPER;
-  if (Core::isExists() && !keeper.isNull())
+  if (hWnd && Core::isExists() && !keeper.isNull())
   { // if not exists then nothing to do
-    Core::i().destroyWindow(keeper, ListWin);
+    Core* core = &Core::i();
+    ParentWlxWindow* pDeleted = NULL;
+
+    auto payload = createCorePayloadEx(
+    []() -> bool { return true; },
+    [&]()
+    {
+      ParentWlxWindow* parent = ParentWlxWindow::getByHandle(hWnd);
+      _assert(parent);
+      if (parent)
+      {
+        _log(QString("Window destroyed. Parent: 0x") + QString::number((quint64)parent, 16)
+             + QString(", HWND: 0x") + QString::number((quint64)parent->winId(), 16));
+
+        parent->close();
+
+        pDeleted = parent;
+      }
+    },
+    [&]()
+    {
+      _assert(pDeleted);
+      if (pDeleted)
+      {
+        core->decreaseWinCounter();
+      }
+    });
+
+    core->processPayload(payload);
+
+    if (core->isUnusable())
+    {
+      delete core;
+    }
   }
 }
 
@@ -141,10 +263,20 @@ void CALLTYPE FUNC_WRAPPER_EXPORT(ListGetDetectString)(char* DetectString, int m
   }
 }
 
-static int listSearchText(const InterfaceKeeper& keeper, HWND ListWin, const QString& SearchString, int SearchParameter)
+static int listSearchText(HWND ListWin, const QString& SearchString, int SearchParameter)
 {
   _assert(Core::isExists());
-  return Core::i().searchText(keeper, ListWin, SearchString, SearchParameter);
+  int result = LISTPLUGIN_ERROR;
+
+  auto payload = createCorePayload([&]()
+  {
+    ParentWlxWindow* parent = ParentWlxWindow::getByHandle(ListWin);
+    result = parent->childWindow()->searchText(SearchString, SearchParameter);
+  });
+
+  Core::i().processPayload(payload);
+
+  return result;
 }
 
 int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchText) (HWND ListWin, char* SearchString, int SearchParameter)
@@ -157,7 +289,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchText) (HWND ListWin, char* SearchStri
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    return listSearchText(keeper, ListWin, _toString(SearchString), SearchParameter);
+    return listSearchText(ListWin, _toString(SearchString), SearchParameter);
   }
 
   return LISTPLUGIN_ERROR;
@@ -173,7 +305,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchTextW) (HWND ListWin, WCHAR* SearchSt
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    return listSearchText(keeper, ListWin, _toString(SearchString), SearchParameter);
+    return listSearchText(ListWin, _toString(SearchString), SearchParameter);
   }
 
   return LISTPLUGIN_ERROR;
@@ -190,7 +322,17 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchDialog) (HWND ListWin, int FindNext)
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    return Core::i().searchDialog(keeper, ListWin, FindNext);
+    int result = LISTPLUGIN_ERROR;
+
+    auto payload = createCorePayload([&]()
+    {
+      ParentWlxWindow* parent = ParentWlxWindow::getByHandle(ListWin);
+      result = parent->childWindow()->searchDialog(FindNext);
+    });
+
+    Core::i().processPayload(payload);
+
+    return result;
   }
 
   return LISTPLUGIN_ERROR;
@@ -207,18 +349,38 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListSendCommand) (HWND ListWin, int Command, in
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    return Core::i().sendCommand(keeper, ListWin, Command, Parameter);
+    int result = LISTPLUGIN_ERROR;
+
+    auto payload = createCorePayload([&]()
+    {
+      ParentWlxWindow* parent = ParentWlxWindow::getByHandle(ListWin);
+      result = parent->childWindow()->sendCommand(Command, Parameter);
+    });
+
+    Core::i().processPayload(payload);
+
+    return result;
   }
 
   return LISTPLUGIN_ERROR;
 }
 
-static int listPrint(const InterfaceKeeper& keeper, HWND ListWin,
-                     const QString& FileToPrint, const QString& DefPrinter,
-                     int PrintFlags, RECT* Margins)
+int listPrint(HWND ListWin, const QString& FileToPrint, const QString& DefPrinter, int PrintFlags, RECT* Margins)
 {
   _assert(Core::isExists());
-  return Core::i().print(keeper, ListWin, FileToPrint, DefPrinter, PrintFlags, Margins);
+
+  int result = LISTPLUGIN_ERROR;
+
+  auto payload = createCorePayload([&]()
+  {
+    ParentWlxWindow* parent = ParentWlxWindow::getByHandle(ListWin);
+    QMargins margins(Margins->left, Margins->top, Margins->right, Margins->bottom);
+    result = parent->childWindow()->print(FileToPrint, DefPrinter, PrintFlags, margins);
+  });
+
+  Core::i().processPayload(payload);
+
+  return result;
 }
 
 int CALLTYPE FUNC_WRAPPER_EXPORT(ListPrint) (HWND ListWin, char* FileToPrint, char* DefPrinter,
@@ -232,7 +394,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListPrint) (HWND ListWin, char* FileToPrint, ch
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    return listPrint(keeper, ListWin, _toString(FileToPrint), _toString(DefPrinter),
+    return listPrint(ListWin, _toString(FileToPrint), _toString(DefPrinter),
                      PrintFlags, Margins);
   }
 
@@ -250,7 +412,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListPrintW) (HWND ListWin, WCHAR* FileToPrint, 
   InterfaceKeeper keeper = KEEPER;
   if ( ! keeper.isNull() )
   {
-    return listPrint(keeper, ListWin, _toString(FileToPrint), _toString(DefPrinter),
+    return listPrint(ListWin, _toString(FileToPrint), _toString(DefPrinter),
                      PrintFlags, Margins);
   }
 

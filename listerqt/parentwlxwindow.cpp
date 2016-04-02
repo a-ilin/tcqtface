@@ -116,17 +116,7 @@ void ParentWlxWindow::setChildWindow(IAbstractWlxWindow* childWindow)
 ParentWlxWindow* ParentWlxWindow::getByHandle(HWND hwnd)
 {
    QWidget* p = (QWidget*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-   ParentWlxWindow* ptr = NULL;
-   try
-   {
-     ptr = p ? qobject_cast<ParentWlxWindow*> (p) : NULL;
-   }
-   catch(...)
-   {
-     _assert_ex(false, "Exception on Parent ptr cast");
-   }
-
-   return ptr;
+   return qobject_cast<ParentWlxWindow*> (p);
 }
 
 void ParentWlxWindow::reloadWidget()

@@ -1,58 +1,97 @@
 #ifndef CORE_H
 #define CORE_H
 
+#include <functional>
+#include <memory>
+
 #include <qt_windows.h>
 #include <qglobal.h>
 
-class QObject;
-class QEvent;
+struct CoreData;
 
-class CorePrivate;
-class InterfaceKeeper;
-class ParentWlxWindow;
+class AtomicMutex;
+class CoreEvent;
+class CorePayload;
 
 class Core
 {
+  Q_DISABLE_COPY(Core)
+
 public:
   ~Core();
 
-  static Core& i();
+  void processPayload(CorePayload& payload);
 
+  bool startApplication();
+  void stopApplication();
+
+  void increaseWinCounter();
+  void decreaseWinCounter();
+
+  // core is not used by any task
+  bool isUnusable() const;
+
+  static Core& i();
   static bool isExists();
 
-  // open a new window with file specified
-  HWND createWindow(const InterfaceKeeper& keeper,
-                    HWND hParentWin,
-                    const QString& sFilePath,
-                    int iShowFlags);
+private:
+  void processPayload_helper(CoreEvent* event);
 
-  // load specified file into an existed window
-  int loadFile(const InterfaceKeeper& keeper,
-               HWND hParentWin,
-               HWND hChildWin,
-               const QString& sFilePath,
-               int iShowFlags);
-
-  void destroyWindow(const InterfaceKeeper& keeper, HWND hWin);
-
-  int searchDialog(const InterfaceKeeper& keeper, HWND hWin,int iFindNext);
-
-  int print(const InterfaceKeeper& keeper, HWND hWin,
-            const QString& sFileToPrint, const QString& sDefPrinter,
-            int iPrintFlags, RECT* pMargins);
-
-  int sendCommand(const InterfaceKeeper& keeper, HWND hWin, int iCommand, int iParameter);
-
-  int searchText(const InterfaceKeeper& keeper, HWND hWin,
-                 const QString& sSearchString, int iSearchParameter);
+  // dispatches system messages until hSem is available
+  static void dispatchMessages(HANDLE hSem);
 
 private:
   Core();
-  CorePrivate* d_ptr;
 
-  Q_DISABLE_COPY(Core)
-  Q_DECLARE_PRIVATE(Core)
+private:
+  std::unique_ptr<CoreData> d;
 };
 
+
+class CoreEvent;
+class CorePayload
+{
+public:
+  CorePayload() {}
+  virtual ~CorePayload() {}
+
+  CoreEvent* createEvent();
+
+  virtual bool preprocess() { return true; }
+  virtual void process() = 0;
+  virtual void postprocess() {}
+};
+
+template <typename FuncPre, typename Func, typename FuncPost>
+class CorePayloadTmpl : public CorePayload
+{
+public:
+  CorePayloadTmpl(FuncPre funcPre, Func func, FuncPost funcPost)
+    : CorePayload()
+    , m_funcPre(funcPre)
+    , m_func(func)
+    , m_funcPost(funcPost) {}
+
+  bool preprocess() Q_DECL_OVERRIDE { return m_funcPre(); }
+  void process() Q_DECL_OVERRIDE { m_func(); }
+  void postprocess() Q_DECL_OVERRIDE { m_funcPost(); }
+
+private:
+  FuncPre m_funcPre;
+  Func m_func;
+  FuncPost m_funcPost;
+};
+
+template <typename FuncPre, typename Func, typename FuncPost> inline
+CorePayloadTmpl<FuncPre, Func, FuncPost> createCorePayloadEx(FuncPre funcPre, Func func, FuncPost funcPost)
+{
+  return CorePayloadTmpl<FuncPre, Func, FuncPost>(funcPre, func, funcPost);
+}
+
+template <typename Func> inline
+CorePayloadTmpl<std::function<bool()>, Func, std::function<void()> > createCorePayload(Func func)
+{
+  return createCorePayloadEx(std::function<bool()>([]()->bool{return true;}), func, std::function<void()>([]{}));
+}
 
 #endif // CORE_H
