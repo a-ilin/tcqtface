@@ -54,6 +54,7 @@ CORE_LIB_NAME = $$coreName(listerqt)
   INCLUDEPATH += $$PWD
 
   LIBS += -L$$PWD -l$${CORE_LIB_NAME}
+  DEF_FILE = $$DESTDIR/listerqt.def
 
   equals(ARCH, x64): {
     TARGET_EXT = ".wlx64"
@@ -63,6 +64,58 @@ CORE_LIB_NAME = $$coreName(listerqt)
 
   HEADERS += $$PWD/wlx_interfaces.h
   SOURCES += $$PWD/listerqt.cpp
+
+  # populate DEF file
+  DEF_FILE = $$OUT_PWD/listerqt.def
+
+  defContents = \
+    "; Declares the module parameters for the DLL." \
+    "EXPORTS" \
+    "GetWlxPlugin" \
+    "GetUnloadableStatus" \
+    "ListGetDetectString" \
+    "ListSetDefaultParams"
+
+  contains(CONFIG, PLUG_LIST_LOAD) {
+    DEFINES += PLUG_LIST_LOAD
+    defContents += \
+      "ListLoad" \
+      "ListLoadW" \
+      "ListLoadNext" \
+      "ListLoadNextW" \
+      "ListCloseWindow" \
+      "ListSendCommand"
+  }
+
+  contains(CONFIG, PLUG_LIST_SEARCH_TEXT) {
+    DEFINES += PLUG_LIST_SEARCH_TEXT
+    defContents += \
+      "ListSearchText" \
+      "ListSearchTextW"
+  }
+
+  contains(CONFIG, PLUG_LIST_SEARCH_DIALOG) {
+    DEFINES += PLUG_LIST_SEARCH_DIALOG
+    defContents += \
+      "ListSearchDialog"
+  }
+
+  contains(CONFIG, PLUG_LIST_PRINT) {
+    DEFINES += PLUG_LIST_PRINT
+    defContents += \
+      "ListPrint" \
+      "ListPrintW"
+  }
+
+  contains(CONFIG, PLUG_LIST_PREVIEW_BITMAP) {
+    DEFINES += PLUG_LIST_PREVIEW_BITMAP
+    defContents += \
+      "ListGetPreviewBitmap" \
+      "ListGetPreviewBitmapW"
+  }
+
+  write_file($$DEF_FILE, defContents)
+
 } else {
   TARGET_EXT = ".dll"
 }

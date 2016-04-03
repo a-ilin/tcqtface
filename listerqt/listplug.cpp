@@ -98,7 +98,7 @@ HWND createWindow(const InterfaceKeeper& keeper, HWND hLister, const QString& fi
   return hWnd;
 }
 
-HWND CALLTYPE FUNC_WRAPPER_EXPORT(ListLoad)(HWND ParentWin, char* FileToLoad, int ShowFlags)
+HWND CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListLoad)(HWND ParentWin, char* FileToLoad, int ShowFlags)
 {
   _log_line;
   CHECK_GLOBAL_ERROR(NULL);
@@ -114,7 +114,7 @@ HWND CALLTYPE FUNC_WRAPPER_EXPORT(ListLoad)(HWND ParentWin, char* FileToLoad, in
   return NULL;
 }
 
-HWND CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadW)(HWND ParentWin, WCHAR* FileToLoad, int ShowFlags)
+HWND CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListLoadW)(HWND ParentWin, WCHAR* FileToLoad, int ShowFlags)
 {
   _log_line;
   CHECK_GLOBAL_ERROR(NULL);
@@ -146,7 +146,7 @@ static int listLoadNext(HWND PluginWin, const QString& FileToLoad, int ShowFlags
   return result;
 }
 
-int CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadNext)(HWND ParentWin, HWND PluginWin,
+int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListLoadNext)(HWND ParentWin, HWND PluginWin,
                                                char* FileToLoad, int ShowFlags)
 {
   Q_UNUSED(ParentWin);
@@ -166,7 +166,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadNext)(HWND ParentWin, HWND PluginWin,
   return LISTPLUGIN_ERROR;
 }
 
-int CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadNextW)(HWND ParentWin, HWND PluginWin,
+int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListLoadNextW)(HWND ParentWin, HWND PluginWin,
                                                 WCHAR* FileToLoad, int ShowFlags)
 {
   Q_UNUSED(ParentWin);
@@ -186,7 +186,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListLoadNextW)(HWND ParentWin, HWND PluginWin,
   return LISTPLUGIN_ERROR;
 }
 
-void CALLTYPE FUNC_WRAPPER_EXPORT(ListCloseWindow)(HWND hWnd)
+void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListCloseWindow)(HWND hWnd)
 {
   _log_line;
   CHECK_GLOBAL_ERROR();
@@ -236,7 +236,7 @@ void CALLTYPE FUNC_WRAPPER_EXPORT(ListCloseWindow)(HWND hWnd)
 }
 
 // return file detectable string
-void CALLTYPE FUNC_WRAPPER_EXPORT(ListGetDetectString)(char* DetectString, int maxlen)
+void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListGetDetectString)(char* DetectString, int maxlen)
 {
   _log_line;
   CHECK_GLOBAL_ERROR();
@@ -279,7 +279,7 @@ static int listSearchText(HWND ListWin, const QString& SearchString, int SearchP
   return result;
 }
 
-int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchText) (HWND ListWin, char* SearchString, int SearchParameter)
+int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSearchText) (HWND ListWin, char* SearchString, int SearchParameter)
 {
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
@@ -295,7 +295,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchText) (HWND ListWin, char* SearchStri
   return LISTPLUGIN_ERROR;
 }
 
-int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchTextW) (HWND ListWin, WCHAR* SearchString, int SearchParameter)
+int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSearchTextW) (HWND ListWin, WCHAR* SearchString, int SearchParameter)
 {
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
@@ -311,7 +311,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchTextW) (HWND ListWin, WCHAR* SearchSt
   return LISTPLUGIN_ERROR;
 }
 
-int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchDialog) (HWND ListWin, int FindNext)
+int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSearchDialog) (HWND ListWin, int FindNext)
 {
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
@@ -338,7 +338,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListSearchDialog) (HWND ListWin, int FindNext)
   return LISTPLUGIN_ERROR;
 }
 
-int CALLTYPE FUNC_WRAPPER_EXPORT(ListSendCommand) (HWND ListWin, int Command, int Parameter)
+int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSendCommand) (HWND ListWin, int Command, int Parameter)
 {
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
@@ -383,7 +383,7 @@ int listPrint(HWND ListWin, const QString& FileToPrint, const QString& DefPrinte
   return result;
 }
 
-int CALLTYPE FUNC_WRAPPER_EXPORT(ListPrint) (HWND ListWin, char* FileToPrint, char* DefPrinter,
+int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListPrint) (HWND ListWin, char* FileToPrint, char* DefPrinter,
                                              int PrintFlags, RECT* Margins)
 {
   _log_line;
@@ -401,7 +401,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListPrint) (HWND ListWin, char* FileToPrint, ch
   return LISTPLUGIN_ERROR;
 }
 
-int CALLTYPE FUNC_WRAPPER_EXPORT(ListPrintW) (HWND ListWin, WCHAR* FileToPrint, WCHAR* DefPrinter,
+int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListPrintW) (HWND ListWin, WCHAR* FileToPrint, WCHAR* DefPrinter,
                                               int PrintFlags, RECT* Margins)
 {
   _log_line;
@@ -419,7 +419,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListPrintW) (HWND ListWin, WCHAR* FileToPrint, 
   return LISTPLUGIN_ERROR;
 }
 
-int CALLTYPE FUNC_WRAPPER_EXPORT(ListNotificationReceived)(HWND ListWin, int Message, WPARAM wParam, LPARAM lParam)
+int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListNotificationReceived)(HWND ListWin, int Message, WPARAM wParam, LPARAM lParam)
 {
   _log_line;
   CHECK_GLOBAL_ERROR(LISTPLUGIN_ERROR);
@@ -438,7 +438,7 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(ListNotificationReceived)(HWND ListWin, int Mes
 // default params setter
 void _set_default_params(ListDefaultParamStruct* dps);
 
-void CALLTYPE FUNC_WRAPPER_EXPORT(ListSetDefaultParams)(ListDefaultParamStruct* dps)
+void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSetDefaultParams)(ListDefaultParamStruct* dps)
 {
   _log_line;
   CHECK_GLOBAL_ERROR();
@@ -476,7 +476,7 @@ static HBITMAP listGetPreviewBitmap(const InterfaceKeeper& keeper, const QString
   return QtWin::toHBITMAP(pixmap, QtWin::HBitmapAlpha);
 }
 
-HBITMAP CALLTYPE FUNC_WRAPPER_EXPORT(ListGetPreviewBitmap)(char* FileToLoad,int width,int height,
+HBITMAP CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListGetPreviewBitmap)(char* FileToLoad,int width,int height,
                                                            char* contentbuf,int contentbuflen)
 {
   _log_line;
@@ -494,7 +494,7 @@ HBITMAP CALLTYPE FUNC_WRAPPER_EXPORT(ListGetPreviewBitmap)(char* FileToLoad,int 
   return NULL;
 }
 
-HBITMAP CALLTYPE FUNC_WRAPPER_EXPORT(ListGetPreviewBitmapW)(WCHAR* FileToLoad,int width,int height,
+HBITMAP CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListGetPreviewBitmapW)(WCHAR* FileToLoad,int width,int height,
                                                             char* contentbuf,int contentbuflen)
 {
   _log_line;
@@ -513,7 +513,7 @@ HBITMAP CALLTYPE FUNC_WRAPPER_EXPORT(ListGetPreviewBitmapW)(WCHAR* FileToLoad,in
 }
 
 // can WLX plugin be unloaded
-int CALLTYPE FUNC_WRAPPER_EXPORT(GetUnloadableStatus)()
+int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(GetUnloadableStatus)()
 {
   if ( LibraryLoader::isExists() )
   {

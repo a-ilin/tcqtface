@@ -4,6 +4,11 @@
 #include <qt_windows.h>
 #include <qglobal.h>
 
+/* This macro magic automates import/export of normal/proxy functions.
+ * The agreement is:
+ * - all exported functions from user .wlx are __stdcall
+ * - all exported functions from core listerqt.dll are __cdecl
+ */
 #define MACRO_HELPER(x) x
 #define PLUGIN_CORE_SFX proxy_
 #define FUNC_WRAPPER_HELPER2(func, sfx) sfx ## func
@@ -12,16 +17,23 @@
 #ifdef PLUGIN_CORE
   #define FUNC_WRAPPER_EXPORT(func) FUNC_WRAPPER(func)
   #define FUNC_WRAPPER_IMPORT(func) func
+  #define CALLTYPE_EXPORT __cdecl
+  #define CALLTYPE_IMPORT __stdcall
+  #define EXTERN_EXPORT extern "C" Q_DECL_EXPORT
+  #define EXTERN_IMPORT
 #else
   #define FUNC_WRAPPER_EXPORT(func) func
   #define FUNC_WRAPPER_IMPORT(func) FUNC_WRAPPER(func)
+  #define CALLTYPE_EXPORT __stdcall
+  #define CALLTYPE_IMPORT __cdecl
+  #define EXTERN_EXPORT
+  #define EXTERN_IMPORT extern "C" Q_DECL_IMPORT
 #endif
-//#define CALLTYPE __stdcall
-#define CALLTYPE
-#define CALLTYPE_EXPORT(func, ret) extern "C" Q_DECL_EXPORT ret CALLTYPE FUNC_WRAPPER_EXPORT(func)
-#define CALLTYPE_IMPORT(func, ret) extern "C" Q_DECL_IMPORT ret CALLTYPE FUNC_WRAPPER_IMPORT(func)
-#define FUNC_DUP(ret, func, param) CALLTYPE_EXPORT(func, ret) param;\
-                                   CALLTYPE_IMPORT(func, ret) param;
+
+#define FUNC_EXPORT(func, ret) EXTERN_EXPORT ret CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(func)
+#define FUNC_IMPORT(func, ret) EXTERN_IMPORT ret CALLTYPE_IMPORT FUNC_WRAPPER_IMPORT(func)
+#define FUNC_DUP(ret, func, param) FUNC_EXPORT(func, ret) param;\
+                                   FUNC_IMPORT(func, ret) param;
 
 
 // internal

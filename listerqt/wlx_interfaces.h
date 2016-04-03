@@ -23,10 +23,12 @@ class IAbstractWlxWindow;
 class IParentWlxWindow;
 class IAbstractWlxPlugin;
 
-// Function to export from plugin DLL
-typedef IAbstractWlxPlugin* (*GetWlxPluginFunc)();
-#ifndef PLUGIN_CORE
-extern "C" Q_DECL_EXPORT IAbstractWlxPlugin* GetWlxPlugin();
+// Function to export from plugin DLL: IAbstractWlxPlugin* GetWlxPlugin();
+#ifdef PLUGIN_CORE
+typedef IAbstractWlxPlugin* (CALLTYPE_IMPORT *GetWlxPluginFunc)();
+#else
+typedef IAbstractWlxPlugin* (CALLTYPE_EXPORT *GetWlxPluginFunc)();
+EXTERN_EXPORT IAbstractWlxPlugin* GetWlxPlugin();
 #endif
 
 // Base plugin's interface class

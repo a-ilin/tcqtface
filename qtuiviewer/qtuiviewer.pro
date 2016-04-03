@@ -13,10 +13,16 @@ TARGET = qtuiviewer
 
 TEMPLATE = lib
 
+# Can create windows
+CONFIG += PLUG_LIST_LOAD
+# Can print
+CONFIG += PLUG_LIST_PRINT
 # No text search available
-#DEFINES += PLUG_LIST_SEARCH_TEXT
+#CONFIG += PLUG_LIST_SEARCH_TEXT
+# No search dialog available
+#CONFIG += PLUG_LIST_SEARCH_DIALOG
 # No preview available
-#DEFINES += PLUG_LIST_PREVIEW_BITMAP
+#CONFIG += PLUG_LIST_PREVIEW_BITMAP
 
 isEmpty(TCQTFACE_PATH) {
 error(Specify TCQTFACE_PATH variable!)

@@ -16,6 +16,8 @@ public:
   {
     _log(QString("Library acquired: %1").arg(LibraryLoader::pathModule(pModule.get())));
     _assert(pWlx && pModule);
+    _assert(m_wlxToModule.find(pWlx) == m_wlxToModule.cend());
+    _assert(m_moduleToWlx.find(pModule) == m_moduleToWlx.cend());
     m_wlxToModule[pWlx] = pModule;
     m_moduleToWlx[pModule] = pWlx;
   }
@@ -27,7 +29,8 @@ public:
     if (it != m_wlxToModule.cend())
     {
       _log(QString("Library released: %1").arg(LibraryLoader::pathModule((*it).second.get())));
-      m_moduleToWlx.erase((*it).second);
+      size_t count = m_moduleToWlx.erase((*it).second);
+      _assert(count == 1);
       m_wlxToModule.erase(it);
     }
   }
