@@ -13,7 +13,6 @@ TARGET = qtuiviewer
 
 TEMPLATE = lib
 
-
 # No text search available
 #DEFINES += PLUG_LIST_SEARCH_TEXT
 # No preview available
@@ -24,6 +23,8 @@ error(Specify TCQTFACE_PATH variable!)
 }
 
 include($$TCQTFACE_PATH/listerqt.pri)
+
+RC_FILE = version.rc
 
 SOURCES += \
   mainwindow.cpp \

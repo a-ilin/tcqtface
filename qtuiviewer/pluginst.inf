@@ -1,6 +1,7 @@
 [plugininstall]
-description=Qt UI Viewer - plugin-viewer of Qt .UI interfaces
+description=QtUiViewer - Viewer of Qt UI interfaces
 type=wlx
 file=qtuiviewer.wlx
-defaultdir=qtuiviewer
+defaultdir=Plugins\wlx\QtUiViewer
 defaultextension=ui
+version=1.0.0

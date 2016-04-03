@@ -10,6 +10,8 @@ TARGET = $${CORE_LIB_NAME}
 
 LIBS += -luser32
 
+RC_FILE = version.rc
+
 SOURCES += \
   listplug.cpp \
   parentwlxwindow.cpp \

@@ -63,4 +63,8 @@ CORE_LIB_NAME = $$coreName(listerqt)
 
   HEADERS += $$PWD/wlx_interfaces.h
   SOURCES += $$PWD/listerqt.cpp
+} else {
+  TARGET_EXT = ".dll"
 }
+
+DEFINES += TARGET=\\\"$$TARGET\\\" TARGET_EXT=\\\"$$TARGET_EXT\\\"
