@@ -23,13 +23,11 @@ class IAbstractWlxWindow;
 class IParentWlxWindow;
 class IAbstractWlxPlugin;
 
-
 // Function to export from plugin DLL
 typedef IAbstractWlxPlugin* (*GetWlxPluginFunc)();
 #ifndef PLUGIN_CORE
 extern "C" Q_DECL_EXPORT IAbstractWlxPlugin* GetWlxPlugin();
 #endif
-
 
 // Base plugin's interface class
 class IAbstractWlxPlugin
@@ -60,6 +58,25 @@ public:
   // NOTE: Called from TC thread
   virtual void setDefaultParams(ListDefaultParamStruct* dps)
   { Q_UNUSED(dps); }
+};
+
+
+// Parent widget's interface class
+class IParentWlxWindow
+{
+public:
+  virtual ~IParentWlxWindow() {}
+
+  // set exclusive keyboard input,
+  // when enabled your window will receive all keyboard input, except F2 and ESC keys
+  virtual void setKeyboardExclusive(bool enable) = 0;
+  virtual bool isKeyboardExclusive() const = 0;
+
+  // set Lister window options (see TC Lister Plugin docs, section WM_COMMAND)
+  virtual void setListerOptions(int itemtype, int value) const = 0;
+
+  QWidget* widget() const
+  { return dynamic_cast<QWidget*>(const_cast<IParentWlxWindow*>(this)); }
 };
 
 
@@ -96,25 +113,9 @@ public:
 
   virtual QWidget* widget() const
   { return dynamic_cast<QWidget*>(const_cast<IAbstractWlxWindow*>(this)); }
-};
 
-
-// Parent widget's interface class
-class IParentWlxWindow
-{
-public:
-  virtual ~IParentWlxWindow() {}
-
-  // set exclusive keyboard input,
-  // when enabled your window will receive all keyboard input, except F2 and ESC keys
-  virtual void setKeyboardExclusive(bool enable) = 0;
-  virtual bool isKeyboardExclusive() const = 0;
-
-  // set Lister window options (see TC Lister Plugin docs, section WM_COMMAND)
-  virtual void setListerOptions(int itemtype, int value) const = 0;
-
-  virtual QWidget* widget() const
-  { return dynamic_cast<QWidget*>(const_cast<IParentWlxWindow*>(this)); }
+  IParentWlxWindow* parentWlx() const
+  { return dynamic_cast<IParentWlxWindow*>(widget()->parent()); }
 };
 
 #endif // WLX_INTERFACES_H

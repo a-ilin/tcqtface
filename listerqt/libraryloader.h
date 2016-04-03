@@ -1,32 +1,27 @@
 #ifndef LIBRARYLOADER_H
 #define LIBRARYLOADER_H
 
-#include <QScopedPointer>
+#include <memory>
+
+#include <QString>
 
 class IAbstractWlxPlugin;
 
-class InterfaceKeeperPrivate;
 class InterfaceKeeper
 {
 public:
-  InterfaceKeeper();
-  InterfaceKeeper(IAbstractWlxPlugin* iface);
-  InterfaceKeeper(const InterfaceKeeper& other);
-
+  InterfaceKeeper(){}
+  InterfaceKeeper(const std::shared_ptr<IAbstractWlxPlugin>& ptr) : m_ptr(ptr) {}
   ~InterfaceKeeper();
 
-  IAbstractWlxPlugin* iface() const;
-  bool isNull() const;
-
-  bool operator== (const InterfaceKeeper& other) const;
+  IAbstractWlxPlugin* get() const { return m_ptr.get(); }
+  operator bool() const { return static_cast<bool>(m_ptr); }
 
 private:
   InterfaceKeeper& operator= (const InterfaceKeeper&) = delete;
 
 private:
-  InterfaceKeeperPrivate* const d_ptr;
-
-  Q_DECLARE_PRIVATE(InterfaceKeeper)
+  std::shared_ptr<IAbstractWlxPlugin> m_ptr;
 };
 
 class LibraryLoaderPrivate;
@@ -49,18 +44,18 @@ public:
   static bool isExists();
 
   // path to module
-  static QString pathModule(void* handle);
+  static QString pathModule(void* hModule);
   // path to this Dll
   static QString pathThis();
   // get directory from path
   static QString dirByPath(const QString& path);
 
   // get handle by address
-  static void* handle(void* addr, bool noref = false);
+  static std::shared_ptr<void> handle(void* addr, bool noref = false);
   // get handle of this Dll
-  static void* handleThis(bool noref = false);
+  static std::shared_ptr<void> handleThis(bool noref = false);
   // get handle of Dll specified in path
-  static void* handlePath(const QString& path);
+  static std::shared_ptr<void> handlePath(const QString& path);
 
 private:
   LibraryLoader();

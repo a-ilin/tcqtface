@@ -17,7 +17,6 @@ SOURCES += \
   application.cpp \
   seexception.cpp \
   core.cpp \
-  atomicmutex.cpp \
   common.cpp
 
 HEADERS += \

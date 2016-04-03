@@ -1,11 +1,9 @@
 #include "parentwlxwindow.h"
 
-#include "core.h"
 #include "wlx_interfaces.h"
 
 #include <QApplication>
-#include <QCloseEvent>
-#include <QMessageBox>
+#include <QSet>
 #include <QTimer>
 #include <QVBoxLayout>
 

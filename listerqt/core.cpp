@@ -4,6 +4,7 @@
 #include "application.h"
 #include "atomicmutex.h"
 #include "common.h"
+#include "libraryloader.h"
 #include "seexception.h"
 
 #include <QCoreApplication>
@@ -185,6 +186,9 @@ Core::Core()
   d->hSemApp = CreateSemaphore(NULL, 1, 1, NULL);
   _assert(d->hSemApp);
 
+  // enable loading Qt plugins
+  QCoreApplication::setLibraryPaths(QStringList() << LibraryLoader::dirByPath(LibraryLoader::pathThis()));
+
   _assert( ! g_pCore );
   g_pCore.reset(this);
 
@@ -198,6 +202,8 @@ Core::~Core()
   stopApplication();
 
   CloseHandle(d->hSemApp);
+
+  QCoreApplication::setLibraryPaths(QStringList());
 
   _assert( ! d->pAgent );
   _log("Core destroyed");

@@ -6,14 +6,28 @@
 class AtomicMutex
 {
 public:
-  AtomicMutex();
+  AtomicMutex()
+    : m_data(0) {}
 
-  void lock();
-  void unlock();
+  void lock()
+  {
+    while ( ! m_data.testAndSetAcquire(0, 1) );
+  }
 
-  bool tryLock();
+  void unlock()
+  {
+    m_data.storeRelease(0);
+  }
 
-  bool isLocked();
+  bool tryLock()
+  {
+    return m_data.testAndSetAcquire(0, 1);
+  }
+
+  bool isLocked()
+  {
+    return (1 == m_data);
+  }
 
 private:
   QAtomicInt m_data;
@@ -22,8 +36,17 @@ private:
 class AtomicLocker
 {
 public:
-  AtomicLocker(AtomicMutex* mutex);
-  ~AtomicLocker();
+  AtomicLocker(AtomicMutex* mutex)
+    : m_mutex(mutex)
+  {
+    m_mutex->lock();
+  }
+
+  ~AtomicLocker()
+  {
+    m_mutex->unlock();
+  }
+
 private:
   AtomicMutex* m_mutex;
 };
