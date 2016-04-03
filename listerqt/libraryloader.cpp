@@ -153,6 +153,10 @@ InterfaceKeeper LibraryLoader::keeper(void* addr)
     }
 
     d->map.add(pWlx, pModule);
+
+    const char* qtVersion = (const char*)GetProcAddress((HMODULE)pModule.get(), "_qt_version");
+    _assert(qtVersion);
+    _log(QString("Qt version: ") + QString(qtVersion + sizeof("_qt_version=") - 1));
   }
 
   return InterfaceKeeper(pWlx);

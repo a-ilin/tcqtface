@@ -103,3 +103,5 @@ int CALLTYPE FUNC_WRAPPER_EXPORT(GetUnloadableStatus)()
 {
   return FUNC_WRAPPER_IMPORT(GetUnloadableStatus)();
 }
+
+extern "C" Q_DECL_EXPORT const char _qt_version[128] = "_qt_version=" QMAKESPEC "_" QT_VERSION_STR "_" ARCH;

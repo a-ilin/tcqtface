@@ -24,7 +24,7 @@ include(C:\SomeDirectory\listerqt.pri)
 There is an example plugin that renders Qt .ui files: qtuiviewer.
 
 ### Binaries
-Some of precompiled binaries can be found here: [link](http://example.com).
+Some of precompiled binaries can be found here: [link](https://github.com/a-ilin/tcqtface/releases).
 
 ### Known Issues
 At this time there is no common solution to keep both 32 and 64 bit

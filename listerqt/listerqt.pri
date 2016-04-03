@@ -5,6 +5,12 @@ contains(QMAKE_TARGET.arch, x86_64): {
 } else {
   ARCH = x86
 }
+DEFINES += ARCH=\\\"$$ARCH\\\"
+
+# QMAKESPEC
+mkspec = $$replace(QMAKESPEC, "\\", "/")
+mkspec = $$section(mkspec, "/", -1, -1)
+DEFINES += QMAKESPEC=\\\"$$mkspec\\\"
 
 # library name rule:
 # - 64bit has suffix "64"
