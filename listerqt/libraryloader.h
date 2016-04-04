@@ -17,6 +17,9 @@ public:
   IAbstractWlxPlugin* get() const { return m_ptr.get(); }
   operator bool() const { return static_cast<bool>(m_ptr); }
 
+  operator IAbstractWlxPlugin*() const { return m_ptr.get(); }
+  IAbstractWlxPlugin* operator->() const { return m_ptr.get(); }
+
 private:
   InterfaceKeeper& operator= (const InterfaceKeeper&) = delete;
 
@@ -31,7 +34,7 @@ public:
   ~LibraryLoader();
 
   // get plugin interface for module that contains addr
-  InterfaceKeeper keeper(void* addr);
+  InterfaceKeeper iface(void* addr);
 
   // returns if library contains a module handle specified by addr
   bool containsLibrary(void* addr) const;

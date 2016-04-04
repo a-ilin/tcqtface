@@ -84,7 +84,7 @@ void Core::processPayload_helper(CoreEvent* event)
         DispatchMessage(&msg);
     }
 
-    Sleep(10);
+    Sleep(3);
   }
 
   d->pendingMutexes.remove(&mutex);
@@ -165,7 +165,7 @@ DWORD WINAPI ThreadWrapper(CONST LPVOID lpParam)
 
 void Core::dispatchMessages(HANDLE hSem)
 { // process incoming messages during wait
-  while (LockSemaphoreEx(hSem, 10) == WAIT_TIMEOUT)
+  while (LockSemaphoreEx(hSem, 3) == WAIT_TIMEOUT)
   {
     MSG msg;
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) != 0)
@@ -288,7 +288,7 @@ void Core::stopApplication()
   while (qApp)
   {
     dispatchMessages(d->hSemApp);
-    Sleep(10);
+    Sleep(3);
   }
 
   // be sure that qApp thread is finished

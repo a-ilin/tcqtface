@@ -16,7 +16,12 @@
  * The QApplication thread will incapsulate all Qt event handling, window management, etc.
  * All interactions with QWidget classes (including plugin windows) are inside
  * QApplication thread.
+ * All methods of interfaces specified below are called from QApplication thread.
  *
+ * NOTE.
+ * QApplication object is not living permanently. It will be created
+ * and destroyed between interactions with the plugin. As QApplication as your plugin
+ * interface will be requested and deleted multiple times.
  */
 
 class IAbstractWlxWindow;
@@ -37,27 +42,26 @@ class IAbstractWlxPlugin
 public:
   virtual ~IAbstractWlxPlugin() {}
 
-  // create a plugin window
-  // NOTE: Called from QApplication thread!!!
-  virtual IAbstractWlxWindow* createWindow(IParentWlxWindow* parent) const = 0;
+  // Create a plugin window
+  virtual IAbstractWlxWindow* createWindow(IParentWlxWindow* parent) const
+  { Q_UNUSED(parent); return NULL; }
   
-  // detect string which used by Total Commander, see TC docs
-  // NOTE: Called from TC thread at plugin's first time load
+  // Return detect string which is used by TC, see TC docs
+  // Called at plugin's first time load
   virtual QString getDetectString() const = 0;
   
-  // checks if file can be opened by the plugin, use this for fast precheck only
-  // NOTE: Called from TC thread each time on file viewing
-  virtual bool isFileAcceptable(const QString& fileName) const = 0;
+  // Check if the file can be opened by the plugin
+  // Called each time before creating new window
+  virtual bool isFileAcceptable(const QString& fileName) const
+  { Q_UNUSED(fileName); return true; }
 
-  // create preview for the file:
+  // Create preview for the file:
   // size: requested size of the preview
-  // content: first 8kB data of the file
-  // NOTE: Called from TC thread
+  // content: first several bytes of the file (usually 8kB)
   virtual QPixmap previewBitmap(const QString& fileName, const QSize& size, const QByteArray& content) const
   { Q_UNUSED(fileName); Q_UNUSED(size); Q_UNUSED(content); return QPixmap(); }
 
-  // setup default parameters of the plugin
-  // NOTE: Called from TC thread
+  // Setup default parameters of the plugin, see TC docs
   virtual void setDefaultParams(ListDefaultParamStruct* dps)
   { Q_UNUSED(dps); }
 };
@@ -69,37 +73,36 @@ class IParentWlxWindow
 public:
   virtual ~IParentWlxWindow() {}
 
-  // set exclusive keyboard input,
+  // Set exclusive keyboard input,
   // when enabled your window will receive all keyboard input, except F2 and ESC keys
   virtual void setKeyboardExclusive(bool enable) = 0;
   virtual bool isKeyboardExclusive() const = 0;
 
-  // set Lister window options (see TC Lister Plugin docs, section WM_COMMAND)
+  // Set Lister window options (see TC Lister Plugin docs, section WM_COMMAND)
   virtual void setListerOptions(int itemtype, int value) const = 0;
 
+  // Widget of parent window
   QWidget* widget() const
   { return dynamic_cast<QWidget*>(const_cast<IParentWlxWindow*>(this)); }
 };
 
 
-// Base class for widget,
-// all interactions with widgets are provided in qApp thread, which is separated from
-// main TotalCmd thread.
+// Base class for widget
 class IAbstractWlxWindow
 {
 public:
   virtual ~IAbstractWlxWindow() {}
 
-  // called after embedding the window into parent widget
+  // Called after embedding the window into parent widget
   virtual void initEmbedded() {}
 
-  // load file, return LISTPLUGIN_OK or LISTPLUGIN_ERROR
+  // Load file, return LISTPLUGIN_OK or LISTPLUGIN_ERROR
   virtual int loadFile(const QString& file, int showFlags)
   { Q_UNUSED(file); Q_UNUSED(showFlags); return LISTPLUGIN_ERROR; }
   // reload file (on F2 press)
   virtual void reload() {}
 
-  // see TC Lister Plugin docs for description of those
+  // See TC Lister Plugin docs for description of those
 
   virtual int print(const QString& file, const QString& printer, int flags, const QMarginsF& margins)
   { Q_UNUSED(file); Q_UNUSED(printer); Q_UNUSED(flags); Q_UNUSED(margins); return LISTPLUGIN_ERROR; }

@@ -121,7 +121,7 @@ LibraryLoader::~LibraryLoader()
   _log("LibraryLoader destroyed");
 }
 
-InterfaceKeeper LibraryLoader::keeper(void* addr)
+InterfaceKeeper LibraryLoader::iface(void* addr)
 {
   Q_D(LibraryLoader);
 
