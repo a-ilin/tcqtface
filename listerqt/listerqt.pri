@@ -39,9 +39,6 @@ QMAKE_CXXFLAGS_RELEASE = $$QMAKE_CXXFLAGS_RELEASE_WITH_DEBUGINFO
 QMAKE_LFLAGS_RELEASE   = $$QMAKE_LFLAGS_RELEASE_WITH_DEBUGINFO
 CONFIG += force_debug_info
 
-# Use static MSVC runtime
-CONFIG += static_runtime
-
 # Setup name of core library
 CORE_LIB_NAME = $$coreName(listerqt)
 

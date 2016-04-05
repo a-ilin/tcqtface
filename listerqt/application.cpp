@@ -1,5 +1,6 @@
 #include "application.h"
 #include "common.h"
+#include "seexception.h"
 
 #include <QStyleFactory>
 
@@ -15,5 +16,35 @@ Application::Application() :
   AppSet set;
   QString style = set.value("Style").toString();
   setStyle(style);
+}
+
+static void showException(const QString& msg)
+{
+  QString prolog("Exception in QApplication Thread\n");
+  _assert_ex(false, prolog + msg);
+}
+
+bool Application::notify(QObject* o, QEvent* e)
+{
+  bool res = true;
+
+  try
+  {
+    res = QApplication::notify(o, e);
+  }
+  catch(SeException* ex)
+  {
+    showException(ex->msg());
+  }
+  catch(const std::exception& ex)
+  {
+    showException(ex.what());
+  }
+  catch(...)
+  {
+    showException("Unknown Exception");
+  }
+
+  return res;
 }
 

@@ -7,6 +7,9 @@ class Application : public QApplication
 {
 public:
   Application();
+
+protected:
+  bool notify(QObject* o, QEvent* e);
 };
 
 #endif // APPLICATION_H

@@ -16,16 +16,6 @@ std::unique_ptr<Core> g_pCore;
 QEvent::Type EventCoreType          = (QEvent::Type)QEvent::registerEventType();
 QEvent::Type EventPostEventsType    = (QEvent::Type)QEvent::registerEventType();
 
-static void EmergencyUnlock(CoreData* d)
-{
-  GlobalError = true;
-  for (AtomicMutex* m : d->pendingMutexes)
-  {
-    m->unlock();
-  }
-  d->pendingMutexes.clear();
-}
-
 CoreEvent* CorePayload::createEvent()
 {
   return new CoreEvent(this);
@@ -34,44 +24,20 @@ CoreEvent* CorePayload::createEvent()
 void Core::processPayload_helper(CoreEvent* event)
 {
   _assert(d->iRecursionLevel > 0);
-
   _log(QString("Thread ID: 0x%1").arg(QString::number((UINT)GetCurrentThreadId(), 16)));
+  _log("Sending payload");
 
   AtomicMutex mutex;
-  d->pendingMutexes.insert(&mutex);
+  _assert(event);
+  event->setMutex(&mutex);
 
-  bool exc = false;
-  QString errMsg("Main (TC) Thread: ");
-
-  try
+  _assert(qApp);
+  if (qApp)
   {
+    mutex.lock();
+
     _assert(d->pAgent);
-    _assert(event);
-    _assert(qApp);
-
-    event->setMutex(&mutex);
-
-    if (qApp)
-    {
-      mutex.lock();
-      QCoreApplication::postEvent(d->pAgent.get(), event);
-    }
-  }
-  catch(SeException* ex)
-  {
-    errMsg += ex->msg();
-    exc = true;
-  }
-  catch(...)
-  {
-    errMsg += QString("Unknown C++ Exception");
-    exc = true;
-  }
-
-  if ( exc )
-  { // an exception occured
-    EmergencyUnlock(d.get());
-    _assert_ex(false, errMsg);
+    QCoreApplication::postEvent(d->pAgent.get(), event);
   }
 
   // process incoming messages during wait
@@ -86,19 +52,18 @@ void Core::processPayload_helper(CoreEvent* event)
 
     Sleep(3);
   }
-
-  d->pendingMutexes.remove(&mutex);
+  _log("Payload is processed");
 }
 
-DWORD WINAPI InitializeQtAppProc(CONST LPVOID lpParam)
+DWORD WINAPI qtAppProc(CONST LPVOID lpParam)
 {
+  _set_se_translator(SeTranslator);
+
   CoreData* d = reinterpret_cast<CoreData*>(lpParam);
-  int code = 0;
+  DWORD code = 0;
 
   {
-    // initialize
     Application app;
-    _assert(qApp);
     _log(QString("qApp thread id: %1").arg(GetCurrentThreadId()));
 
     _assert( ! d->pAgent );
@@ -116,50 +81,10 @@ DWORD WINAPI InitializeQtAppProc(CONST LPVOID lpParam)
     d->pAgent.reset();
   }
 
-  _assert( ! qApp );
   _log(QString("Result code: %1").arg(code));
 
   UnlockSemaphore(d->hSemApp);
 
-  return code;
-}
-
-DWORD WINAPI ThreadWrapper(CONST LPVOID lpParam)
-{
-  CoreData* d = reinterpret_cast<CoreData*>(lpParam);
-  int code = 0;
-
-  _set_se_translator(SeTranslator);
-
-  bool exc = false;
-  QString errMsg("QApplication Thread: ");
-
-  try
-  {
-    code = InitializeQtAppProc(lpParam);
-  }
-  catch(SeException* ex)
-  {
-    errMsg += ex->msg();
-    exc = true;
-  }
-  catch(...)
-  {
-    errMsg += QString("Unknown C++ Exception");
-    exc = true;
-  }
-
-  if (exc)
-  {
-    EmergencyUnlock(d);
-
-    _assert_ex(false, errMsg);
-
-    UnlockSemaphore(d->hSemApp);
-    ExitThread(-1);
-  }
-
-  ExitThread(code);
   return code;
 }
 
@@ -228,7 +153,7 @@ void Core::processPayload(CorePayload& payload)
 {
   RecursionHolder rholder(d.get());
 
-  if ( payload.preprocess() )
+  if (startApplication() && payload.preprocess())
   {
     // main event
     processPayload_helper(payload.createEvent());
@@ -241,9 +166,9 @@ void Core::processPayload(CorePayload& payload)
     });
 
     processPayload_helper(eventPoster.createEvent());
-  }
 
-  payload.postprocess();
+    payload.postprocess();
+  }
 }
 
 bool Core::startApplication()
@@ -258,7 +183,7 @@ bool Core::startApplication()
   LockSemaphore(d->hSemApp);
 
   // App thread
-  HANDLE hQtThread = CreateThread(NULL, 0, &ThreadWrapper, d.get(), 0, NULL);
+  HANDLE hQtThread = CreateThread(NULL, 0, &qtAppProc, d.get(), 0, NULL);
   _assert(hQtThread);
   if ( hQtThread )
   {

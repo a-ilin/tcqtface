@@ -192,8 +192,8 @@ std::shared_ptr<void> LibraryLoader::handle(void* addr, bool noref)
                            &hModule))
   {
     int ret = GetLastError();
-    _messagebox(QString("GetModuleHandle returned error: 0x%1")
-                .arg(QString::number(ret, 16)));
+    _assert_ex(false, QString("GetModuleHandle returned error: 0x%1")
+                        .arg(QString::number(ret, 16)));
   }
 
   if (noref)

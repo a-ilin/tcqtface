@@ -22,9 +22,6 @@ public:
 
   void processPayload(CorePayload& payload);
 
-  bool startApplication();
-  void stopApplication();
-
   void increaseWinCounter();
   void decreaseWinCounter();
 
@@ -35,6 +32,9 @@ public:
   static bool isExists();
 
 private:
+  bool startApplication();
+  void stopApplication();
+
   void processPayload_helper(CoreEvent* event);
 
   // dispatches system messages until hSem is available

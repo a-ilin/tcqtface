@@ -10,7 +10,9 @@ SeException::SeException(UINT nSeCode, _EXCEPTION_POINTERS* pExcPointers) :
 
 QString SeException::msg() const
 {
-  return QString("Structured Exception. Hex code: 0x") + QString::number(m_code, 16);
+  return QString("Structured Exception. Hex code: 0x%1 at address %2")
+      .arg(QString::number(m_code, 16))
+      .arg(QString::number((qulonglong)m_pExcPointers->ExceptionRecord->ExceptionAddress, 16));
 }
 
 void SeTranslator(UINT nSeCode, _EXCEPTION_POINTERS* pExcPointers)

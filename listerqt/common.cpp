@@ -2,62 +2,86 @@
 
 #include "atomicmutex.h"
 
+#include <QByteArray>
 #include <QDateTime>
+#include <QElapsedTimer>
+#include <QFile>
 #include <QFileInfo>
 
 #include "libraryloader.h"
 #include "listplug.h"
 
-// global plugin error
-bool GlobalError = false;
-
+// log time performance statistics
+static QElapsedTimer g_perfTimer;
+// log mutex
 static AtomicMutex g_logMutex;
-static const QString g_logFile = LibraryLoader::dirByPath(LibraryLoader::pathThis()) +
-                                 QChar('\\') + QString("listplug_dbg.log");
-
+// log file name
+static QString g_logFile;
+// temporary log buffer
+static QByteArray g_logBuffer;
+// max log facility
+static int g_logFacility = LogDebug;
 // show message box on assert
 static bool g_msgOnAssert = true;
-
-static int g_logFacility = LogDebug;
+// settings file name
 static QString g_setFileName;
 
-
-QString _log_string_helper(const QString& msg, const QString& file,
-                    const QString& function, const QString& line,
-                    bool timeStamp)
+// create a single log string from multiple components
+QByteArray _log_string_helper(const QString& msg, const char* file,
+                    const char* function, const char* line,
+                    bool bTimeStamp, int facility)
 {
-  QString datetime = timeStamp ?
-                       QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz ") :
-                       QString();
+  if (facility > g_logFacility)
+  { // skip message
+    return QByteArray();
+  }
+
+  QString datetime;
+  if (bTimeStamp)
+  {
+    if ( ! g_perfTimer.isValid() )
+    {
+      g_perfTimer.start();
+    }
+
+    datetime += QString::number(g_perfTimer.nsecsElapsed() / 1000).rightJustified(9);
+    datetime += QDateTime::currentDateTime().toString(" yyyy-MM-dd HH:mm:ss.zzz ");
+  }
 
   QString fileName = QFileInfo(file).fileName();
 
   QString result = QString(datetime +
                            fileName.leftJustified(20) +
-                           QChar(':') + line.rightJustified(4) +
+                           QChar(':') + QString(line).rightJustified(4) +
                            QChar(' ') +
-                           function.leftJustified(30) +
+                           QString(function).leftJustified(30) +
                            QString(":") + msg + QChar('\n'));
 
-  return result;
+  return result.toLocal8Bit();
 }
 
-void _log_ex_helper(const QString& str, int facility)
+// write to log
+void _log_ex_helper(const QByteArray& buf)
 {
-  if (facility > g_logFacility)
-  { // skip message
+  if (buf.isEmpty())
+  { // nothing to do
     return;
   }
 
   AtomicLocker locker(&g_logMutex);
 
-  FILE* dbgFile = NULL;
-  errno_t err = fopen_s(&dbgFile, g_logFile.toLocal8Bit().constData(), "at");
-  if (err == S_OK)
+  if ( ! g_logFile.isEmpty() )
   {
-    QByteArray loc8bit = str.toLocal8Bit();
-    fputs(loc8bit.constData(), dbgFile);
-    fclose(dbgFile);
+    QFile f;
+    f.setFileName(g_logFile);
+    if (f.open(QIODevice::Append | QIODevice::Text))
+    {
+      f.write(buf);
+    }
+  }
+  else
+  {
+    g_logBuffer.append(buf);
   }
 }
 
@@ -71,7 +95,7 @@ void _set_default_params(ListDefaultParamStruct* dps)
 
   if (dps->size < sizeof(ListDefaultParamStruct))
   { // old TC version?
-    _log("dps->size < sizeof(ListDefaultParamStruct)");
+    _log_ex("dps->size < sizeof(ListDefaultParamStruct)", LogCritical);
     return;
   }
 
@@ -81,8 +105,19 @@ void _set_default_params(ListDefaultParamStruct* dps)
   _log(g_setFileName);
 
   AppSet set;
-  g_logFacility = set.value("LogFacility", LogCritical).toInt();
+  g_logFacility = set.value("LogFacility", LogNone).toInt();
+  g_logFile = set.value("LogFile", QString()).toString();
   g_msgOnAssert = set.value("MsgOnAssert", true).toBool();
+
+  if (g_logFile.isEmpty() || (g_logFacility == LogNone) )
+  { // switch off logging if no filename had given
+    g_logFacility = LogNone;
+  }
+  else
+  { // flush the log buffer
+    _log_ex_helper(g_logBuffer);
+  }
+  g_logBuffer.clear();
 }
 
 
@@ -96,6 +131,6 @@ void _assert_ex_helper(const QString& str)
 {
   if (g_logFacility >= LogCritical)
   {
-    _messagebox_ex(str, "ASSERTION FAILED!", MB_ICONERROR | MB_OK);
+    _messagebox_ex(str, "tcqtface ASSERTION FAILED!", MB_ICONERROR | MB_OK);
   }
 }

@@ -7,7 +7,6 @@
 
 #include <QEvent>
 #include <QObject>
-#include <QSet>
 
 // processes Core payloads inside QApplication thread
 class CoreAgent : public QObject
@@ -24,7 +23,6 @@ struct CoreData
 {
   std::unique_ptr<CoreAgent> pAgent;
   HANDLE hSemApp;   // sync app create/destroy
-  QSet<AtomicMutex*> pendingMutexes; // pending mutexes
   int iRecursionLevel;
   int iWinCount; // counter of active windows
 };

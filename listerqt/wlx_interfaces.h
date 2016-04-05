@@ -116,7 +116,7 @@ public:
   virtual int sendCommand(int command, int parameter)
   { Q_UNUSED(command); Q_UNUSED(parameter); return LISTPLUGIN_ERROR; }
 
-  virtual QWidget* widget() const
+  QWidget* widget() const
   { return dynamic_cast<QWidget*>(const_cast<IAbstractWlxWindow*>(this)); }
 
   IParentWlxWindow* parentWlx() const

@@ -44,16 +44,16 @@ enum LogFacility
   LogCritical  = 1,  // log assert failures and show messageboxes
   LogDebug     = 2   // log all info
 };
-QString _log_string_helper(const QString& msg, const QString& file,
-                    const QString& function, const QString& line,
-                    bool timeStamp);
-#define _log_string(msg, timeStamp) \
-  _log_string_helper(QString(msg), QString(__FILE__), \
-                     QString(__FUNCTION__), QString(TOSTRING(__LINE__)), timeStamp)
+QByteArray _log_string_helper(const QString& msg, const char* file,
+                    const char* function, const char* line,
+                    bool bTimeStamp, int facility);
+#define _log_string(msg, bTimeStamp, facility) \
+  _log_string_helper(msg, __FILE__, \
+                     __FUNCTION__, TOSTRING(__LINE__), bTimeStamp, facility)
 
-void _log_ex_helper(const QString& str, int facility);
+void _log_ex_helper(const QByteArray& buf);
 
-#define _log_ex(msg, facility) _log_ex_helper(_log_string(msg, true), facility)
+#define _log_ex(msg, facility) _log_ex_helper(_log_string(msg, true, facility))
 #define _log(msg) _log_ex(msg, LogDebug)
 #define _log_line _log(QString())
 
@@ -74,9 +74,6 @@ void _assert_ex_helper(const QString& str);
   }
 
 #define _assert(expr) _assert_ex( expr, #expr )
-// Main Switch
-extern bool GlobalError;
-#define CHECK_GLOBAL_ERROR(...) if ( GlobalError ) { _log("GlobalError is set."); return __VA_ARGS__; }
 
 // settings
 class AppSet : public QSettings
@@ -84,7 +81,6 @@ class AppSet : public QSettings
 public:
   AppSet();
 };
-
 
 // semaphore control
 #define LockSemaphoreEx(hSem, timeMs) \
@@ -104,15 +100,4 @@ public:
   LockSemaphore(hSem); \
   UnlockSemaphore(hSem);
 
-// NOTE: non-thread safe because of racing!
-inline
-int GetSemaphoreCount(HANDLE hSem)
-{
-  long lPrev = 0;
-  UnlockSemaphoreEx(hSem, 1, &lPrev);
-  LockSemaphore(hSem);
-  return lPrev;
-}
-
 #endif // COMMON_H
-

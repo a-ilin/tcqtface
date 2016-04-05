@@ -3,6 +3,7 @@
 #include "wlx_interfaces.h"
 
 #include <QApplication>
+#include <QLabel>
 #include <QSet>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -103,12 +104,20 @@ void ParentWlxWindow::setChildWindow(IAbstractWlxWindow* childWindow)
 {
   releaseChild();
 
-  m_childWindow = childWindow;
-  QWidget* w = m_childWindow->widget();
-
-  layout()->addWidget(w);
-
-  m_childWindow->initEmbedded();
+  QWidget* w = childWindow->widget();
+  _assert(w);
+  if (w)
+  {
+    m_childWindow = childWindow;
+    layout()->addWidget(w);
+    m_childWindow->initEmbedded();
+    _log("Window is embedded");
+  }
+  else
+  {
+    layout()->addWidget(new QLabel(QString("Cannot cast IAbstractWlxWindow* to QWidget*")));
+    _log("Window is NOT embedded. Cannot cast to QWidget*.");
+  }
 }
 
 ParentWlxWindow* ParentWlxWindow::getByHandle(HWND hwnd)
@@ -128,15 +137,18 @@ void ParentWlxWindow::reloadWidget()
 
 void ParentWlxWindow::releaseChild()
 {
-  // clear layout
-  while(layout()->count())
+  if (m_childWindow)
   {
-    layout()->takeAt(0);
-  }
+    // clear layout
+    while(layout()->count())
+    {
+      layout()->takeAt(0);
+    }
 
-  delete m_childWindow;
-  _log(QString("Child window destroyed: ") + QString::number((quint64)m_childWindow, 16));
-  m_childWindow = NULL;
+    m_childWindow->widget()->deleteLater();
+    _log(QString("Child window destroyed: ") + QString::number((quint64)m_childWindow, 16));
+    m_childWindow = NULL;
+  }
 }
 
 void ParentWlxWindow::setNativeParent(WId hParentWin)
