@@ -65,7 +65,7 @@ static LRESULT CALLBACK DummyWndProc(HWND /*hWnd*/, UINT /*Msg*/, WPARAM /*wPara
   return S_OK;
 }
 
-ParentWlxWindow::ParentWlxWindow(const InterfaceKeeper& keeper, WId hParentWin) :
+ParentWlxWindow::ParentWlxWindow(const Interface& keeper, WId hParentWin) :
   QWidget(),
   m_keeper(keeper),
   m_keyboardExclusive(false),

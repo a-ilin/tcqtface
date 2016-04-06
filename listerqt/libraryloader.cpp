@@ -2,19 +2,21 @@
 
 #include <QFileInfo>
 
+#include "atomicmutex.h"
 #include "common.h"
 #include "wlx_interfaces.h"
 
 // plugin loader
-std::unique_ptr<LibraryLoader> g_pLibraryLoader;
+std::shared_ptr<Loader> g_pLoader;
+AtomicMutex g_loaderMutex;
 
 class LibraryMap
 {
 public:
-  void add(const std::shared_ptr<IAbstractWlxPlugin>& pWlx,
-           const std::shared_ptr<void>& pModule)
+  void add(const Interface& pWlx,
+           const Library& pModule)
   {
-    _log(QString("Library acquired: %1").arg(LibraryLoader::pathModule(pModule.get())));
+    _log(QString("Library acquired: %1").arg(Loader::pathModule(pModule.get())));
     _assert(pWlx && pModule);
     _assert(m_wlxToModule.find(pWlx) == m_wlxToModule.cend());
     _assert(m_moduleToWlx.find(pModule) == m_moduleToWlx.cend());
@@ -22,22 +24,22 @@ public:
     m_moduleToWlx[pModule] = pWlx;
   }
 
-  void remove(const std::shared_ptr<IAbstractWlxPlugin>& pWlx)
+  void remove(const Interface& pWlx)
   {
     auto it = m_wlxToModule.find(pWlx);
     _assert(it != m_wlxToModule.cend());
     if (it != m_wlxToModule.cend())
     {
-      _log(QString("Library released: %1").arg(LibraryLoader::pathModule((*it).second.get())));
+      _log(QString("Library released: %1").arg(Loader::pathModule((*it).second.get())));
       size_t count = m_moduleToWlx.erase((*it).second);
       _assert(count == 1);
       m_wlxToModule.erase(it);
     }
   }
 
-  std::shared_ptr<IAbstractWlxPlugin> wlx(const std::shared_ptr<void>& pModule) const
+  Interface wlx(const Library& pModule) const
   {
-    std::shared_ptr<IAbstractWlxPlugin> pWlx;
+    Interface pWlx;
     auto it = m_moduleToWlx.find(pModule);
     if (it != m_moduleToWlx.cend())
     {
@@ -46,9 +48,9 @@ public:
     return pWlx;
   }
 
-  std::shared_ptr<void> module(const std::shared_ptr<IAbstractWlxPlugin>& pWlx) const
+  Library module(const Interface& pWlx) const
   {
-    std::shared_ptr<void> pModule;
+    Library pModule;
     auto it = m_wlxToModule.find(pWlx);
     if (it != m_wlxToModule.cend())
     {
@@ -57,38 +59,93 @@ public:
     return pModule;
   }
 
+  void simplify()
+  {
+    _assert(m_wlxToModule.size() == m_moduleToWlx.size());
+
+    for (auto it = m_wlxToModule.begin(); it != m_wlxToModule.end();)
+    {
+      if ((*it).first.use_count() == 2)
+      {
+        it = m_wlxToModule.erase(it);
+      }
+      else
+      {
+        ++it;
+      }
+    }
+
+    for (auto it = m_moduleToWlx.begin(); it != m_moduleToWlx.end();)
+    {
+      if ((*it).second.use_count() == 1)
+      {
+        it = m_moduleToWlx.erase(it);
+      }
+      else
+      {
+        ++it;
+      }
+    }
+
+    _assert(m_wlxToModule.size() == m_moduleToWlx.size());
+  }
+
   bool isEmpty() const { return m_wlxToModule.empty(); }
   bool contains(const std::shared_ptr<void>& pModule) const { return m_moduleToWlx.find(pModule) != m_moduleToWlx.cend(); }
 
 private:
-  std::map<std::shared_ptr<IAbstractWlxPlugin>, std::shared_ptr<void> > m_wlxToModule;
-  std::map<std::shared_ptr<void>, std::shared_ptr<IAbstractWlxPlugin> > m_moduleToWlx;
+  std::map<Interface, Library> m_wlxToModule;
+  std::map<Library, Interface> m_moduleToWlx;
 };
 
 
-class LibraryLoaderPrivate
+class LoaderPrivate
 {
 public:
+  mutable AtomicMutex mapMutex;
   LibraryMap map;
 };
 
 
-LibraryLoader& LibraryLoader::i()
+std::shared_ptr<Loader> Loader::i()
 {
-  if ( ! g_pLibraryLoader )
+  LoaderLocker locker;
+  if ( ! g_pLoader )
   {
-    g_pLibraryLoader.reset(new LibraryLoader());
+    new Loader();
   }
 
-  return *g_pLibraryLoader;
+  _assert(g_pLoader);
+  return g_pLoader;
 }
 
-bool LibraryLoader::isExists()
+bool Loader::isExists()
 {
-  return static_cast<bool>(g_pLibraryLoader);
+  _assert(g_loaderMutex.isLocked());
+  return static_cast<bool>(g_pLoader);
 }
 
-QString LibraryLoader::pathModule(void* hModule)
+bool Loader::destroy()
+{
+  _assert(g_loaderMutex.isLocked());
+  _assert(g_pLoader);
+
+  LoaderPrivate* d = g_pLoader->d_func();
+
+  if (g_pLoader.use_count() == 1)
+  {
+    d->map.simplify();
+    if (d->map.isEmpty())
+    {
+      g_pLoader.reset();
+      return true;
+    }
+  }
+
+  return false;
+}
+
+QString Loader::pathModule(void* hModule)
 {
   TCHAR strPath[MAX_PATH + 1];
   memset(strPath, 0, sizeof(strPath));
@@ -102,41 +159,48 @@ QString LibraryLoader::pathModule(void* hModule)
   return _toString(strPath);
 }
 
-QString LibraryLoader::pathThis()
+QString Loader::pathThis()
 {
   return pathModule(handleThis(true).get());
 }
 
-LibraryLoader::LibraryLoader() :
-  d_ptr(new LibraryLoaderPrivate())
+Loader::Loader() :
+  d_ptr(new LoaderPrivate())
 {
+  _assert(g_loaderMutex.isLocked());
+  _assert( ! g_pLoader );
+  g_pLoader.reset(this, [](Loader* pLoader)
+  {
+    delete pLoader;
+  });
   _log("LibraryLoader created");
 }
 
-LibraryLoader::~LibraryLoader()
+Loader::~Loader()
 {
   delete d_ptr;
-  g_pLibraryLoader.release();
-
   _log("LibraryLoader destroyed");
 }
 
-InterfaceKeeper LibraryLoader::iface(void* addr)
+Interface Loader::iface(Library& pModule)
 {
-  Q_D(LibraryLoader);
+  Q_D(Loader);
 
-  std::shared_ptr<void> pModule(handle(addr));
   _assert(pModule);
 
-  // wrong addr passed
+#ifdef CORE_STATICLIB
+  _assert(hModule == handleThis(true));
+#else
   _assert(pModule != handleThis(true));
+#endif
 
   if ( ! pModule )
   {
-    return InterfaceKeeper();
+    return Interface();
   }
 
-  std::shared_ptr<IAbstractWlxPlugin> pWlx(d->map.wlx(pModule));
+  AtomicLocker mapLocker(&d->mapMutex);
+  Interface pWlx(d->map.wlx(pModule));
 
   if ( ! pWlx )
   { // doesn't exist, need create
@@ -144,7 +208,7 @@ InterfaceKeeper LibraryLoader::iface(void* addr)
     _assert(pFunc);
     if ( ! pFunc )
     {
-      return InterfaceKeeper();
+      return Interface();
     }
 
     pWlx.reset(pFunc());
@@ -152,7 +216,7 @@ InterfaceKeeper LibraryLoader::iface(void* addr)
     _assert(pWlx);
     if ( ! pWlx )
     {
-      return InterfaceKeeper();
+      return Interface();
     }
 
     d->map.add(pWlx, pModule);
@@ -162,27 +226,22 @@ InterfaceKeeper LibraryLoader::iface(void* addr)
     _log(QString("Qt version: ") + QString(qtVersion + sizeof("_qt_version=") - 1));
   }
 
-  return InterfaceKeeper(pWlx);
+  return pWlx;
 }
 
-bool LibraryLoader::containsLibrary(void* addr) const
+bool Loader::containsLibrary(void* addr) const
 {
-  Q_D(const LibraryLoader);
+  Q_D(const Loader);
+  AtomicLocker mapLocker(&d->mapMutex);
   return d->map.contains(handle(addr, true));
 }
 
-bool LibraryLoader::isEmpty() const
-{
-  Q_D(const LibraryLoader);
-  return d->map.isEmpty();
-}
-
-QString LibraryLoader::dirByPath(const QString& path)
+QString Loader::dirByPath(const QString& path)
 {
   return QFileInfo(path).canonicalPath().replace('/', '\\');
 }
 
-std::shared_ptr<void> LibraryLoader::handle(void* addr, bool noref)
+Library Loader::handle(void* addr, bool noref)
 {
   HMODULE hModule = NULL;
 
@@ -198,31 +257,34 @@ std::shared_ptr<void> LibraryLoader::handle(void* addr, bool noref)
 
   if (noref)
   {
-    return std::shared_ptr<void>(hModule, [](void*){});
+    return Library(hModule, [](void*){});
   }
 
-  return std::shared_ptr<void>(hModule, [](void* ptr){FreeLibrary((HMODULE)ptr);});
+  return Library(hModule, [](void* ptr){FreeLibrary((HMODULE)ptr);});
 }
 
-std::shared_ptr<void> LibraryLoader::handleThis(bool noref)
+Library Loader::handleThis(bool noref)
 {
   volatile static TCHAR* localVar = (TCHAR*)0x12345;
   return handle(&localVar, noref);
 }
 
-std::shared_ptr<void> LibraryLoader::handlePath(const QString& path)
+Library Loader::handlePath(const QString& path)
 {
   HMODULE hDll = LoadLibraryEx(_TQ(path), NULL,
                                LOAD_LIBRARY_SEARCH_DEFAULT_DIRS |
                                LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
 
-  return std::shared_ptr<void>(hDll, [](void* ptr){FreeLibrary((HMODULE)ptr);});
+  return Library(hDll, [](void* ptr){FreeLibrary((HMODULE)ptr);});
 }
 
-InterfaceKeeper::~InterfaceKeeper()
+void Loader::lock()
 {
-  if (m_ptr && m_ptr.use_count() == 3)
-  { // after destruction it will be the single (2 in map)
-    LibraryLoader::i().d_func()->map.remove(m_ptr);
-  }
+  g_loaderMutex.lock();
+}
+
+void Loader::unlock()
+{
+  _assert(g_loaderMutex.isLocked());
+  g_loaderMutex.unlock();
 }

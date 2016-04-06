@@ -8,7 +8,6 @@
 #include <QFile>
 #include <QFileInfo>
 
-#include "libraryloader.h"
 #include "listplug.h"
 
 // log time performance statistics
@@ -107,7 +106,7 @@ void _set_default_params(ListDefaultParamStruct* dps)
   AppSet set;
   g_logFacility = set.value("LogFacility", LogNone).toInt();
   g_logFile = set.value("LogFile", QString()).toString();
-  g_msgOnAssert = set.value("MsgOnAssert", true).toBool();
+  g_msgOnAssert = set.value("MsgOnAssert", false).toBool();
 
   if (g_logFile.isEmpty() || (g_logFacility == LogNone) )
   { // switch off logging if no filename had given

@@ -1,3 +1,8 @@
+QT += core gui widgets winextras
+
+# Switch static/shared library
+#CONFIG += CORE_STATICLIB
+#DEFINES += CORE_STATICLIB
 
 # Architecture
 contains(QMAKE_TARGET.arch, x86_64): {
@@ -114,7 +119,9 @@ CORE_LIB_NAME = $$coreName(listerqt)
   write_file($$DEF_FILE, defContents)
 
 } else {
-  TARGET_EXT = ".dll"
+  ! contains(CONFIG, staticlib) {
+    TARGET_EXT = ".dll"
+  }
 }
 
 DEFINES += TARGET=\\\"$$TARGET\\\" TARGET_EXT=\\\"$$TARGET_EXT\\\"

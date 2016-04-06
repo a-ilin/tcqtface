@@ -1,16 +1,24 @@
-QT += core gui widgets winextras
-
 TEMPLATE = lib
-CONFIG += shared c++11 PLUGIN_CORE
+CONFIG += c++11 PLUGIN_CORE
 DEFINES += PLUGIN_CORE
 
 include(listerqt.pri)
+
+contains(CONFIG, CORE_STATICLIB) {
+  CONFIG += staticlib
+} else {
+  CONFIG += shared
+}
 
 TARGET = $${CORE_LIB_NAME}
 
 LIBS += -luser32
 
-RC_FILE = version.rc
+! contains(CONFIG, staticlib) {
+  RC_FILE = version.rc
+}
+
+INCLUDEPATH += $$PWD
 
 SOURCES += \
   listplug.cpp \
@@ -31,7 +39,8 @@ HEADERS += \
   seexception.h \
   core.h \
   core_p.h \
-  atomicmutex.h
+  atomicmutex.h \
+    manager.h
 
 
 ! isEmpty(INSTALL_PATH) {

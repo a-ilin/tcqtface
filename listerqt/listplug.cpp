@@ -4,6 +4,7 @@
 
 #include "core.h"
 #include "libraryloader.h"
+#include "manager.h"
 #include "parentwlxwindow.h"
 
 #include <stdio.h>
@@ -14,48 +15,11 @@
 
 #pragma intrinsic(_ReturnAddress)
 
-#define KEEPER ResourceKeeper(_ReturnAddress())
+#define MANAGER Manager(_ReturnAddress())
 
-class ResourceKeeper
+
+HWND createWindow(Manager& manager, HWND hLister, const QString& fileName, int flags)
 {
-public:
-  ResourceKeeper(void* retAddr)
-    : m_retAddr(retAddr) {}
-
-  ~ResourceKeeper()
-  {
-    if (Core::isExists())
-    {
-      Core* core = &Core::i();
-      if (core->isUnusable())
-      {
-        delete core;
-      }
-    }
-
-    if (LibraryLoader::isExists())
-    {
-      LibraryLoader* lib = &LibraryLoader::i();
-      if (lib->isEmpty())
-      {
-        delete lib;
-      }
-    }
-  }
-
-  InterfaceKeeper iface() const
-  {
-    return LibraryLoader::i().iface(m_retAddr);
-  }
-
-private:
-  void* m_retAddr;
-};
-
-HWND createWindow(const ResourceKeeper& keeper, HWND hLister, const QString& fileName, int flags)
-{
-  Core* core = &Core::i();
-
   HWND hWnd = NULL;
   ParentWlxWindow* pWnd = NULL;
 
@@ -63,7 +27,7 @@ HWND createWindow(const ResourceKeeper& keeper, HWND hLister, const QString& fil
   []() -> bool {return true;},
   [&]()
   {
-    InterfaceKeeper iface = keeper.iface();
+    Interface iface = manager.iface();
     _assert(iface);
     if ( iface && iface->isFileAcceptable(fileName) )
     {
@@ -97,11 +61,11 @@ HWND createWindow(const ResourceKeeper& keeper, HWND hLister, const QString& fil
   {
     if (hWnd)
     {
-      core->increaseWinCounter();
+      manager.core()->increaseWinCounter();
     }
   });
 
-  core->processPayload(payload);
+  manager.core()->processPayload(payload);
 
   if ( ! hWnd )
   {
@@ -113,18 +77,17 @@ HWND createWindow(const ResourceKeeper& keeper, HWND hLister, const QString& fil
 HWND CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListLoad)(HWND ParentWin, char* FileToLoad, int ShowFlags)
 {
   _log_line;
-  return createWindow(KEEPER, ParentWin, _toString(FileToLoad), ShowFlags);
+  return createWindow(MANAGER, ParentWin, _toString(FileToLoad), ShowFlags);
 }
 
 HWND CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListLoadW)(HWND ParentWin, WCHAR* FileToLoad, int ShowFlags)
 {
   _log_line;
-  return createWindow(KEEPER, ParentWin, _toString(FileToLoad), ShowFlags);
+  return createWindow(MANAGER, ParentWin, _toString(FileToLoad), ShowFlags);
 }
 
-static int listLoadNext(HWND PluginWin, const QString& FileToLoad, int ShowFlags)
+static int listLoadNext(Manager& manager, HWND PluginWin, const QString& FileToLoad, int ShowFlags)
 {
-  _assert(Core::isExists());
   int result = LISTPLUGIN_ERROR;
 
   auto payload = createCorePayload([&]()
@@ -137,7 +100,7 @@ static int listLoadNext(HWND PluginWin, const QString& FileToLoad, int ShowFlags
     }
   });
 
-  Core::i().processPayload(payload);
+  manager.core()->processPayload(payload);
   return result;
 }
 
@@ -147,8 +110,8 @@ int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListLoadNext)(HWND ParentWin, HWND Plugi
   Q_UNUSED(ParentWin);
 
   _log_line;
-  ResourceKeeper keeper = KEEPER;
-  return listLoadNext(PluginWin, _toString(FileToLoad), ShowFlags);
+  Manager manager = MANAGER;
+  return listLoadNext(manager, PluginWin, _toString(FileToLoad), ShowFlags);
 }
 
 int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListLoadNextW)(HWND ParentWin, HWND PluginWin,
@@ -157,21 +120,19 @@ int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListLoadNextW)(HWND ParentWin, HWND Plug
   Q_UNUSED(ParentWin);
 
   _log_line;
-  ResourceKeeper keeper = KEEPER;
-  return listLoadNext(PluginWin, _toString(FileToLoad), ShowFlags);
+  Manager manager = MANAGER;
+  return listLoadNext(manager, PluginWin, _toString(FileToLoad), ShowFlags);
 }
 
 void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListCloseWindow)(HWND hWnd)
 {
   _log_line;
-  ResourceKeeper keeper = KEEPER;
+  Manager manager = MANAGER;
 
   _assert(hWnd);
-  _assert(Core::isExists());
 
-  if (hWnd && Core::isExists())
+  if (hWnd)
   { // if not exists then nothing to do
-    Core* core = &Core::i();
     ParentWlxWindow* pDeleted = NULL;
 
     auto payload = createCorePayloadEx(
@@ -195,11 +156,11 @@ void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListCloseWindow)(HWND hWnd)
       _assert(pDeleted);
       if (pDeleted)
       {
-        core->decreaseWinCounter();
+        manager.core()->decreaseWinCounter();
       }
     });
 
-    core->processPayload(payload);
+    manager.core()->processPayload(payload);
   }
 }
 
@@ -207,11 +168,11 @@ void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListCloseWindow)(HWND hWnd)
 void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListGetDetectString)(char* DetectString, int maxlen)
 {
   _log_line;
-  ResourceKeeper keeper = KEEPER;
+  Manager manager = MANAGER;
 
   auto payload = createCorePayload([&]()
   {
-    InterfaceKeeper iface = keeper.iface();
+    Interface iface = manager.iface();
     if (iface)
     {
       QString detect = iface->getDetectString();
@@ -225,12 +186,11 @@ void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListGetDetectString)(char* DetectString
     }
   });
 
-  Core::i().processPayload(payload);
+  manager.core()->processPayload(payload);
 }
 
-static int listSearchText(HWND ListWin, const QString& SearchString, int SearchParameter)
+static int listSearchText(Manager& manager, HWND ListWin, const QString& SearchString, int SearchParameter)
 {
-  _assert(Core::isExists());
   int result = LISTPLUGIN_ERROR;
 
   auto payload = createCorePayload([&]()
@@ -243,29 +203,28 @@ static int listSearchText(HWND ListWin, const QString& SearchString, int SearchP
     }
   });
 
-  Core::i().processPayload(payload);
+  manager.core()->processPayload(payload);
   return result;
 }
 
 int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSearchText) (HWND ListWin, char* SearchString, int SearchParameter)
 {
   _log_line;
-  ResourceKeeper keeper = KEEPER;
-  return listSearchText(ListWin, _toString(SearchString), SearchParameter);
+  Manager manager = MANAGER;
+  return listSearchText(manager, ListWin, _toString(SearchString), SearchParameter);
 }
 
 int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSearchTextW) (HWND ListWin, WCHAR* SearchString, int SearchParameter)
 {
   _log_line;
-  ResourceKeeper keeper = KEEPER;
-  return listSearchText(ListWin, _toString(SearchString), SearchParameter);
+  Manager manager = MANAGER;
+  return listSearchText(manager, ListWin, _toString(SearchString), SearchParameter);
 }
 
 int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSearchDialog) (HWND ListWin, int FindNext)
 {
   _log_line;
-  ResourceKeeper keeper = KEEPER;
-  _assert(Core::isExists());
+  Manager manager = MANAGER;
   int result = LISTPLUGIN_ERROR;
 
   auto payload = createCorePayload([&]()
@@ -278,14 +237,14 @@ int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSearchDialog) (HWND ListWin, int Fin
     }
   });
 
-  Core::i().processPayload(payload);
+  manager.core()->processPayload(payload);
   return result;
 }
 
 int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSendCommand) (HWND ListWin, int Command, int Parameter)
 {
   _log_line;
-  ResourceKeeper keeper = KEEPER;
+  Manager manager = MANAGER;
   int result = LISTPLUGIN_ERROR;
 
   auto payload = createCorePayload([&]()
@@ -298,13 +257,12 @@ int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSendCommand) (HWND ListWin, int Comm
     }
   });
 
-  Core::i().processPayload(payload);
+  manager.core()->processPayload(payload);
   return result;
 }
 
-int listPrint(HWND ListWin, const QString& FileToPrint, const QString& DefPrinter, int PrintFlags, RECT* Margins)
+int listPrint(Manager& manager, HWND ListWin, const QString& FileToPrint, const QString& DefPrinter, int PrintFlags, RECT* Margins)
 {
-  _assert(Core::isExists());
   int result = LISTPLUGIN_ERROR;
 
   auto payload = createCorePayload([&]()
@@ -314,7 +272,7 @@ int listPrint(HWND ListWin, const QString& FileToPrint, const QString& DefPrinte
     result = parent->childWindow()->print(FileToPrint, DefPrinter, PrintFlags, margins);
   });
 
-  Core::i().processPayload(payload);
+  manager.core()->processPayload(payload);
   return result;
 }
 
@@ -322,22 +280,22 @@ int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListPrint) (HWND ListWin, char* FileToPr
                                              int PrintFlags, RECT* Margins)
 {
   _log_line;
-  ResourceKeeper keeper = KEEPER;
-  return listPrint(ListWin, _toString(FileToPrint), _toString(DefPrinter), PrintFlags, Margins);
+  Manager manager = MANAGER;
+  return listPrint(manager, ListWin, _toString(FileToPrint), _toString(DefPrinter), PrintFlags, Margins);
 }
 
 int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListPrintW) (HWND ListWin, WCHAR* FileToPrint, WCHAR* DefPrinter,
                                               int PrintFlags, RECT* Margins)
 {
   _log_line;
-  ResourceKeeper keeper = KEEPER;
-  return listPrint(ListWin, _toString(FileToPrint), _toString(DefPrinter), PrintFlags, Margins);
+  Manager manager = MANAGER;
+  return listPrint(manager, ListWin, _toString(FileToPrint), _toString(DefPrinter), PrintFlags, Margins);
 }
 
 int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListNotificationReceived)(HWND ListWin, int Message, WPARAM wParam, LPARAM lParam)
 {
   _log_line;
-  ResourceKeeper keeper = KEEPER;
+  Manager manager = MANAGER;
 
   _log(QString("ListWin: 0x%1, Message: 0x%2, wParam: 0x%3, lParam: 0x%4")
        .arg(QString::number((qint64)ListWin, 16))
@@ -354,13 +312,13 @@ void _set_default_params(ListDefaultParamStruct* dps);
 void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSetDefaultParams)(ListDefaultParamStruct* dps)
 {
   _log_line;
-  ResourceKeeper keeper = KEEPER;
+  Manager manager = MANAGER;
 
   _set_default_params(dps);
 
   auto payload = createCorePayload([&]()
   {
-    InterfaceKeeper iface = keeper.iface();
+    Interface iface = manager.iface();
     _assert(iface);
     if (iface)
     {
@@ -368,18 +326,17 @@ void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSetDefaultParams)(ListDefaultParamS
     }
   });
 
-  Core::i().processPayload(payload);
+  manager.core()->processPayload(payload);
 }
 
-static HBITMAP listGetPreviewBitmap(const ResourceKeeper& keeper, const QString& FileToLoad,
+static HBITMAP listGetPreviewBitmap(Manager& manager, const QString& FileToLoad,
                                     int width, int height, char *contentbuf, int contentbuflen)
 {
   HBITMAP hBitMap = NULL;
-  Core* core = &Core::i();
 
   auto payload = createCorePayload([&]()
   {
-    InterfaceKeeper iface = keeper.iface();
+    Interface iface = manager.iface();
     _assert(iface);
     if (iface)
     {
@@ -391,7 +348,7 @@ static HBITMAP listGetPreviewBitmap(const ResourceKeeper& keeper, const QString&
     }
   });
 
-  core->processPayload(payload);
+  manager.core()->processPayload(payload);
   return hBitMap;
 }
 
@@ -399,22 +356,23 @@ HBITMAP CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListGetPreviewBitmap)(char* FileToLo
                                                            char* contentbuf,int contentbuflen)
 {
   _log_line;
-  return listGetPreviewBitmap(KEEPER, _toString(FileToLoad), width, height, contentbuf, contentbuflen);
+  return listGetPreviewBitmap(MANAGER, _toString(FileToLoad), width, height, contentbuf, contentbuflen);
 }
 
 HBITMAP CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListGetPreviewBitmapW)(WCHAR* FileToLoad,int width,int height,
                                                             char* contentbuf,int contentbuflen)
 {
   _log_line;
-  return listGetPreviewBitmap(KEEPER, _toString(FileToLoad), width, height, contentbuf, contentbuflen);
+  return listGetPreviewBitmap(MANAGER, _toString(FileToLoad), width, height, contentbuf, contentbuflen);
 }
 
 // can WLX plugin be unloaded
 int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(GetUnloadableStatus)()
 {
-  if ( LibraryLoader::isExists() )
+  LoaderLocker locker;
+  if ( Loader::isExists() )
   {
-    return LibraryLoader::i().containsLibrary(_ReturnAddress()) ? 0 : 1;
+    return Loader::i()->containsLibrary(_ReturnAddress()) ? 0 : 1;
   }
   else
   {

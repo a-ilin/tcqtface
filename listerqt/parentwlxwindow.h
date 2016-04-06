@@ -15,7 +15,7 @@ class ParentWlxWindow : public QWidget, public IParentWlxWindow
   Q_OBJECT
 
 public:
-  ParentWlxWindow(const InterfaceKeeper& keeper, WId parentWin);
+  ParentWlxWindow(const Interface& keeper, WId parentWin);
   ~ParentWlxWindow();
 
   void setChildWindow(IAbstractWlxWindow* childWindow);
@@ -52,7 +52,7 @@ protected slots:
   void onFirstShowTimer();
 
 protected:
-  InterfaceKeeper m_keeper;
+  Interface m_keeper;
 
   bool m_keyboardExclusive;
 

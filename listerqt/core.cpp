@@ -11,7 +11,8 @@
 #include <QThread>
 
 // global objects
-std::unique_ptr<Core> g_pCore;
+AtomicMutex g_coreMutex;
+std::shared_ptr<Core> g_pCore;
 
 QEvent::Type EventCoreType          = (QEvent::Type)QEvent::registerEventType();
 QEvent::Type EventPostEventsType    = (QEvent::Type)QEvent::registerEventType();
@@ -23,7 +24,6 @@ CoreEvent* CorePayload::createEvent()
 
 void Core::processPayload_helper(CoreEvent* event)
 {
-  _assert(d->iRecursionLevel > 0);
   _log(QString("Thread ID: 0x%1").arg(QString::number((UINT)GetCurrentThreadId(), 16)));
   _log("Sending payload");
 
@@ -106,24 +106,26 @@ void Core::dispatchMessages(HANDLE hSem)
 Core::Core()
   : d(new CoreData)
 {
+  _assert(g_coreMutex.isLocked());
+  _assert( ! g_pCore );
+  g_pCore.reset(this, [](Core* pCore)
+  {
+    delete pCore;
+  });
+
   d->iWinCount = 0;
-  d->iRecursionLevel = 0;
   d->hSemApp = CreateSemaphore(NULL, 1, 1, NULL);
   _assert(d->hSemApp);
 
   // enable loading Qt plugins
-  QCoreApplication::setLibraryPaths(QStringList() << LibraryLoader::dirByPath(LibraryLoader::pathThis()));
-
-  _assert( ! g_pCore );
-  g_pCore.reset(this);
+  QCoreApplication::setLibraryPaths(QStringList() << Loader::dirByPath(Loader::pathThis()));
 
   _log("Core created");
 }
 
 Core::~Core()
 {
-  g_pCore.release();
-
+  _assert(g_coreMutex.isLocked());
   stopApplication();
 
   CloseHandle(d->hSemApp);
@@ -134,25 +136,51 @@ Core::~Core()
   _log("Core destroyed");
 }
 
-Core& Core::i()
+std::shared_ptr<Core> Core::i()
 {
+  AtomicLocker locker(&g_coreMutex);
   if ( ! g_pCore )
   {
     new Core();
   }
 
-  return *g_pCore.get();
+  _assert(g_pCore);
+  return g_pCore;
 }
 
 bool Core::isExists()
 {
+  _assert(g_coreMutex.isLocked());
   return static_cast<bool>(g_pCore);
+}
+
+bool Core::destroy()
+{
+  _assert(g_coreMutex.isLocked());
+  _assert(g_pCore);
+
+  if ((g_pCore.use_count() == 1) && !g_pCore->winCounter())
+  {
+    g_pCore.reset();
+    return true;
+  }
+
+  return false;
+}
+
+void Core::lock()
+{
+  g_coreMutex.lock();
+}
+
+void Core::unlock()
+{
+  _assert(g_coreMutex.isLocked());
+  g_coreMutex.unlock();
 }
 
 void Core::processPayload(CorePayload& payload)
 {
-  RecursionHolder rholder(d.get());
-
   if (startApplication() && payload.preprocess())
   {
     // main event
@@ -173,6 +201,8 @@ void Core::processPayload(CorePayload& payload)
 
 bool Core::startApplication()
 {
+  CoreLocker locker;
+
   if (qApp)
   {
     return true;
@@ -200,6 +230,8 @@ bool Core::startApplication()
 
 void Core::stopApplication()
 {
+  _assert(g_coreMutex.isLocked());
+
   if ( ! qApp )
   {
     return;
@@ -234,9 +266,10 @@ void Core::decreaseWinCounter()
   _log(QString("Total window count: ") + QString::number(d->iWinCount));
 }
 
-bool Core::isUnusable() const
+int Core::winCounter() const
 {
-  return  ! ( d->iRecursionLevel || d->iWinCount );
+  _assert(g_coreMutex.isLocked());
+  return d->iWinCount;
 }
 
 bool CoreAgent::event(QEvent* e)

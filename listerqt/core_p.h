@@ -23,18 +23,7 @@ struct CoreData
 {
   std::unique_ptr<CoreAgent> pAgent;
   HANDLE hSemApp;   // sync app create/destroy
-  int iRecursionLevel;
-  int iWinCount; // counter of active windows
-};
-
-class RecursionHolder
-{
-public:
-  RecursionHolder(CoreData* p)
-    : m_p(p) { ++m_p->iRecursionLevel; }
-  ~RecursionHolder() { --m_p->iRecursionLevel; }
-private:
-  CoreData* m_p;
+  QAtomicInt iWinCount; // counter of active windows
 };
 
 extern QEvent::Type EventCoreType;

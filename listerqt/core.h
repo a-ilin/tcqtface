@@ -18,18 +18,19 @@ class Core
   Q_DISABLE_COPY(Core)
 
 public:
-  ~Core();
-
   void processPayload(CorePayload& payload);
 
   void increaseWinCounter();
   void decreaseWinCounter();
+  int winCounter() const;
 
-  // core is not used by any task
-  bool isUnusable() const;
-
-  static Core& i();
+  static std::shared_ptr<Core> i();
   static bool isExists();
+  static bool destroy();
+
+  // multithreading guard
+  static void lock();
+  static void unlock();
 
 private:
   bool startApplication();
@@ -42,11 +43,18 @@ private:
 
 private:
   Core();
+  ~Core();
 
 private:
   std::unique_ptr<CoreData> d;
 };
 
+class CoreLocker
+{
+public:
+  CoreLocker()  { Core::lock(); }
+  ~CoreLocker() { Core::unlock(); }
+};
 
 class CoreEvent;
 class CorePayload

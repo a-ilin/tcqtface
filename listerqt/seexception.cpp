@@ -1,6 +1,6 @@
 #include "seexception.h"
 
-#include <common.h>
+#include "common.h"
 
 SeException::SeException(UINT nSeCode, _EXCEPTION_POINTERS* pExcPointers) :
   m_code(nSeCode),
