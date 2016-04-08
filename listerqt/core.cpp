@@ -26,22 +26,21 @@ void Core::processPayload_helper(CoreEvent* event)
 {
   _log(QString("Thread ID: 0x%1").arg(QString::number((UINT)GetCurrentThreadId(), 16)));
   _log("Sending payload");
-
-  AtomicMutex mutex;
   _assert(event);
-  event->setMutex(&mutex);
+
+  Event e(FALSE, TRUE);
+  event->setEvent(&e);
 
   _assert(qApp);
   if (qApp)
   {
-    mutex.lock();
-
+    e.reset();
     _assert(d->pAgent);
     QCoreApplication::postEvent(d->pAgent.get(), event);
   }
 
   // process incoming messages during wait
-  while ( ! mutex.tryLock() )
+  while ( e.wait(3) == WAIT_TIMEOUT )
   {
     MSG msg;
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) != 0)
@@ -69,28 +68,24 @@ DWORD WINAPI qtAppProc(CONST LPVOID lpParam)
     _assert( ! d->pAgent );
     d->pAgent.reset(new CoreAgent());
 
-    UnlockSemaphore(d->hSemApp);
+    d->hSemApp.unlock();
 
     _log("Enter qApp EventLoop");
     code = app.exec();
     _log("Leave qApp EventLoop");
 
     // deinitialize
-    LockSemaphore(d->hSemApp);
-
+    SemaphoreLocker(&d->hSemApp);
     d->pAgent.reset();
   }
 
   _log(QString("Result code: %1").arg(code));
-
-  UnlockSemaphore(d->hSemApp);
-
   return code;
 }
 
-void Core::dispatchMessages(HANDLE hSem)
+void Core::dispatchMessages()
 { // process incoming messages during wait
-  while (LockSemaphoreEx(hSem, 3) == WAIT_TIMEOUT)
+  while (d->hSemApp.lock(3) == WAIT_TIMEOUT)
   {
     MSG msg;
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) != 0)
@@ -100,7 +95,7 @@ void Core::dispatchMessages(HANDLE hSem)
     }
   }
 
-  UnlockSemaphore(hSem);
+  d->hSemApp.unlock();
 }
 
 Core::Core()
@@ -114,8 +109,6 @@ Core::Core()
   });
 
   d->iWinCount = 0;
-  d->hSemApp = CreateSemaphore(NULL, 1, 1, NULL);
-  _assert(d->hSemApp);
 
   // enable loading Qt plugins
   QCoreApplication::setLibraryPaths(QStringList() << Loader::dirByPath(Loader::pathThis()));
@@ -127,8 +120,6 @@ Core::~Core()
 {
   _assert(g_coreMutex.isLocked());
   stopApplication();
-
-  CloseHandle(d->hSemApp);
 
   QCoreApplication::setLibraryPaths(QStringList());
 
@@ -210,7 +201,7 @@ bool Core::startApplication()
 
   _log("Starting qApp...");
 
-  LockSemaphore(d->hSemApp);
+  d->hSemApp.lock();
 
   // App thread
   HANDLE hQtThread = CreateThread(NULL, 0, &qtAppProc, d.get(), 0, NULL);
@@ -219,7 +210,7 @@ bool Core::startApplication()
   {
     CloseHandle(hQtThread);
     // wait until qApp will be initialized
-    WaitForSemaphore(d->hSemApp);
+    SemaphoreLocker(&d->hSemApp);
   }
 
   _assert(qApp);
@@ -244,12 +235,12 @@ void Core::stopApplication()
 
   while (qApp)
   {
-    dispatchMessages(d->hSemApp);
+    dispatchMessages();
     Sleep(3);
   }
 
   // be sure that qApp thread is finished
-  dispatchMessages(d->hSemApp);
+  dispatchMessages();
 
   _log("qApp is stopped");
 }
@@ -286,12 +277,12 @@ bool CoreAgent::event(QEvent* e)
     }
     catch(...)
     {
-      ce->mutex()->unlock();
+      ce->event()->set();
       throw;
     }
 
     ce->accept();
-    ce->mutex()->unlock();
+    ce->event()->set();
     return true;
   }
 

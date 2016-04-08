@@ -9,7 +9,6 @@
 
 struct CoreData;
 
-class AtomicMutex;
 class CoreEvent;
 class CorePayload;
 
@@ -39,7 +38,7 @@ private:
   void processPayload_helper(CoreEvent* event);
 
   // dispatches system messages until hSem is available
-  static void dispatchMessages(HANDLE hSem);
+  void dispatchMessages();
 
 private:
   Core();

@@ -82,22 +82,5 @@ public:
   AppSet();
 };
 
-// semaphore control
-#define LockSemaphoreEx(hSem, timeMs) \
-  WaitForSingleObject(hSem, timeMs)
-
-#define LockSemaphore(hSem) \
-  LockSemaphoreEx(hSem, INFINITE)
-
-#define UnlockSemaphoreEx(hSem, iCount, pPrevCount) \
-  BOOL res = ReleaseSemaphore(hSem, iCount, pPrevCount); \
-  _assert(res);
-
-#define UnlockSemaphore(hSem) \
-  UnlockSemaphoreEx(hSem, 1, NULL);
-
-#define WaitForSemaphore(hSem)\
-  LockSemaphore(hSem); \
-  UnlockSemaphore(hSem);
 
 #endif // COMMON_H

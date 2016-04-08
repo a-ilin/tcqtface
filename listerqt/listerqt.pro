@@ -4,10 +4,8 @@ DEFINES += PLUGIN_CORE
 
 include(listerqt.pri)
 
-contains(CONFIG, CORE_STATICLIB) {
+contains(CONFIG, static) {
   CONFIG += staticlib
-} else {
-  CONFIG += shared
 }
 
 TARGET = $${CORE_LIB_NAME}
@@ -40,7 +38,9 @@ HEADERS += \
   core.h \
   core_p.h \
   atomicmutex.h \
-    manager.h
+    manager.h \
+    semaphore.h \
+    event.h
 
 
 ! isEmpty(INSTALL_PATH) {

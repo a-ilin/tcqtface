@@ -4,6 +4,8 @@
 #include <memory>
 
 #include "core.h"
+#include "event.h"
+#include "semaphore.h"
 
 #include <QEvent>
 #include <QObject>
@@ -22,7 +24,7 @@ protected:
 struct CoreData
 {
   std::unique_ptr<CoreAgent> pAgent;
-  HANDLE hSemApp;   // sync app create/destroy
+  Semaphore hSemApp;   // sync app create/destroy
   QAtomicInt iWinCount; // counter of active windows
 };
 
@@ -32,16 +34,16 @@ class CoreEvent : public QEvent
 public:
   CoreEvent(CorePayload* payload)
     : QEvent(EventCoreType)
-    , m_pMutex(NULL)
+    , m_pEvent(NULL)
     , m_payload(payload) {}
 
-  void setMutex(AtomicMutex* pMutex) { m_pMutex = pMutex; }
-  AtomicMutex* mutex() const { return m_pMutex; }
+  void setEvent(Event* pEvent) { m_pEvent = pEvent; }
+  Event* event() const { return m_pEvent; }
 
   CorePayload* payload() const { return m_payload; }
 
 private:
-  AtomicMutex* m_pMutex;
+  Event* m_pEvent;
   CorePayload* m_payload;
 };
 
