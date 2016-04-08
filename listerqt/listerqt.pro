@@ -4,15 +4,9 @@ DEFINES += PLUGIN_CORE
 
 include(listerqt.pri)
 
-contains(CONFIG, static) {
-  CONFIG += staticlib
-}
-
 TARGET = $${CORE_LIB_NAME}
 
-LIBS += -luser32
-
-! contains(CONFIG, staticlib) {
+! contains(CONFIG, static) {
   RC_FILE = version.rc
 }
 
@@ -38,9 +32,9 @@ HEADERS += \
   core.h \
   core_p.h \
   atomicmutex.h \
-    manager.h \
-    semaphore.h \
-    event.h
+  manager.h \
+  semaphore.h \
+  event.h
 
 
 ! isEmpty(INSTALL_PATH) {

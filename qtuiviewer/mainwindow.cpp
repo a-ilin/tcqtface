@@ -1,6 +1,10 @@
 #include "mainwindow.h"
 
 #ifdef USE_DESIGNER
+#ifdef STATIC_BUILD
+  #define QT_DESIGNER_STATIC
+  #undef QDESIGNER_UILIB_LIBRARY
+#endif
 #include <QFormBuilder>
 #else
 #include <QUiLoader>

@@ -1,8 +1,9 @@
 QT += core gui widgets winextras
 
 # Switch static/shared library
-#CONFIG += CORE_STATICLIB
-#DEFINES += CORE_STATICLIB
+contains(CONFIG, static) {
+  DEFINES += STATIC_BUILD
+}
 
 # Architecture
 contains(QMAKE_TARGET.arch, x86_64): {
@@ -38,10 +39,12 @@ defineReplace(coreName) {
 QMAKE_CXXFLAGS_EXCEPTIONS_ON = -EHa
 QMAKE_CXXFLAGS_STL_ON = -EHa
 
+# link libs
+contains(CONFIG, PLUGIN_CORE)|contains(CONFIG, static) {
+  LIBS += -luser32
+}
+
 # Enable debuginfo
-QMAKE_CFLAGS_RELEASE   = $$QMAKE_CFLAGS_RELEASE_WITH_DEBUGINFO
-QMAKE_CXXFLAGS_RELEASE = $$QMAKE_CXXFLAGS_RELEASE_WITH_DEBUGINFO
-QMAKE_LFLAGS_RELEASE   = $$QMAKE_LFLAGS_RELEASE_WITH_DEBUGINFO
 CONFIG += force_debug_info
 
 # Setup name of core library
@@ -53,10 +56,25 @@ CORE_LIB_NAME = $$coreName(listerqt)
     TARGET = $${TARGET}d
   }
 
+  # FIX: qt doesn't link plugins if TEMPLATE is not an app
+  contains(CONFIG, static) {
+    CONFIG += dll force_import_plugins
+    QTPLUGIN += \
+      qwindows \
+      windowsprintersupport \
+      qdds \
+      qicns \
+      qico \
+      qsvg \
+      qtga \
+      qtiff \
+      qwbmp \
+      qwebp
+  }
+
   INCLUDEPATH += $$PWD
 
   LIBS += -L$$PWD -l$${CORE_LIB_NAME}
-  DEF_FILE = $$DESTDIR/listerqt.def
 
   equals(ARCH, x64): {
     TARGET_EXT = ".wlx64"
@@ -119,7 +137,7 @@ CORE_LIB_NAME = $$coreName(listerqt)
   write_file($$DEF_FILE, defContents)
 
 } else {
-  ! contains(CONFIG, staticlib) {
+  ! contains(CONFIG, static) {
     TARGET_EXT = ".dll"
   }
 }

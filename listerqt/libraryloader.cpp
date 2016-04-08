@@ -188,7 +188,7 @@ Interface Loader::iface(Library& pModule)
 
   _assert(pModule);
 
-#ifdef CORE_STATICLIB
+#ifdef STATIC_BUILD
   _assert(pModule == handleThis(true));
 #else
   _assert(pModule != handleThis(true));

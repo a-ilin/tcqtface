@@ -15,7 +15,7 @@
   #define FUNC_WRAPPER_IMPORT(func) func
   #define CALLTYPE_EXPORT __stdcall
   #define CALLTYPE_IMPORT __stdcall
-  #ifdef CORE_STATICLIB
+  #ifdef STATIC_BUILD
     #define EXTERN_EXPORT
   #else
     #define EXTERN_EXPORT Q_DECL_EXPORT
@@ -27,7 +27,7 @@
   #define CALLTYPE_EXPORT __stdcall
   #define CALLTYPE_IMPORT __stdcall
   #define EXTERN_EXPORT
-  #ifdef CORE_STATICLIB
+  #ifdef STATIC_BUILD
     #define EXTERN_IMPORT
   #else
     #define EXTERN_IMPORT Q_DECL_IMPORT
@@ -36,8 +36,14 @@
 
 #define FUNC_EXPORT(func, ret) EXTERN_EXPORT ret CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(func)
 #define FUNC_IMPORT(func, ret) EXTERN_IMPORT ret CALLTYPE_IMPORT FUNC_WRAPPER_IMPORT(func)
+
+#ifdef PLUGIN_CORE
+#define FUNC_DUP(ret, func, param) FUNC_EXPORT(func, ret) param;
+#else
 #define FUNC_DUP(ret, func, param) FUNC_EXPORT(func, ret) param;\
                                    FUNC_IMPORT(func, ret) param;
+#endif
+
 
 
 // internal
