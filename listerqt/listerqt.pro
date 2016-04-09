@@ -34,7 +34,8 @@ HEADERS += \
   atomicmutex.h \
   manager.h \
   semaphore.h \
-  event.h
+  event.h \
+  thread.h
 
 
 ! isEmpty(INSTALL_PATH) {

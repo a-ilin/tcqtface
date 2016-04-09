@@ -1,7 +1,6 @@
 #include "application.h"
 #include "common.h"
 #include "seexception.h"
-
 #include <QStyleFactory>
 
 // pseudo command line arguments to be passed to QApplication
@@ -13,9 +12,11 @@ Application::Application() :
 {
   setQuitOnLastWindowClosed(false);
 
-  AppSet set;
-  QString style = set.value("Style").toString();
-  setStyle(style);
+  QString style = AppSet::readString("Style");
+  if (style.size())
+  {
+    setStyle(style);
+  }
 }
 
 static void showException(const QString& msg)

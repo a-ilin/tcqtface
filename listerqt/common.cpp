@@ -71,11 +71,11 @@ void _log_ex_helper(const QByteArray& buf)
 
   if ( ! g_logFile.isEmpty() )
   {
-    QFile f;
-    f.setFileName(g_logFile);
-    if (f.open(QIODevice::Append | QIODevice::Text))
+    FILE* fd = fopen(g_logFile.toLatin1().constData(), "at");
+    if (fd)
     {
-      f.write(buf);
+      fwrite(buf.constData(), buf.size(), 1, fd);
+      fclose(fd);
     }
   }
   else
@@ -103,10 +103,9 @@ void _set_default_params(ListDefaultParamStruct* dps)
   g_setFileName = dps->DefaultIniName;
   _log(g_setFileName);
 
-  AppSet set;
-  g_logFacility = set.value("LogFacility", LogNone).toInt();
-  g_logFile = set.value("LogFile", QString()).toString();
-  g_msgOnAssert = set.value("MsgOnAssert", false).toBool();
+  g_logFacility = AppSet::readInt("LogFacility", LogNone);
+  g_logFile = AppSet::readString("LogFile", QString());
+  g_msgOnAssert = AppSet::readInt("MsgOnAssert", 0);
 
   if (g_logFile.isEmpty() || (g_logFacility == LogNone) )
   { // switch off logging if no filename had given
@@ -119,17 +118,25 @@ void _set_default_params(ListDefaultParamStruct* dps)
   g_logBuffer.clear();
 }
 
-
-AppSet::AppSet() :
-  QSettings(g_setFileName, QSettings::IniFormat)
-{
-  beginGroup("qtface");
-}
-
 void _assert_ex_helper(const QString& str)
 {
   if (g_logFacility >= LogCritical)
   {
     _messagebox_ex(str, "tcqtface ASSERTION FAILED!", MB_ICONERROR | MB_OK);
   }
+}
+
+QString AppSet::readString(const QString& key, const QString& defValue)
+{
+  const int maxSize = 255;
+  QString result(maxSize, '\0');
+  int sz = GetPrivateProfileString(L"qtface", (LPCWSTR)key.utf16(), (LPCWSTR)defValue.utf16(),
+                         (LPWSTR)result.data(), maxSize, (LPCWSTR)g_setFileName.utf16());
+  result.resize(sz);
+  return result;
+}
+
+uint AppSet::readInt(const QString& key, int defValue)
+{
+  return GetPrivateProfileInt(L"qtface", (LPCWSTR)key.utf16(), defValue, (LPCWSTR)g_setFileName.utf16());
 }

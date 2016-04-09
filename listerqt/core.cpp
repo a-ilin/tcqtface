@@ -11,11 +11,39 @@
 #include <QThread>
 
 // global objects
-AtomicMutex g_coreMutex;
-std::shared_ptr<Core> g_pCore;
+static AtomicMutex g_coreMutex;
+static std::shared_ptr<Core> g_pCore;
 
-QEvent::Type EventCoreType          = (QEvent::Type)QEvent::registerEventType();
-QEvent::Type EventPostEventsType    = (QEvent::Type)QEvent::registerEventType();
+QEvent::Type EventCoreType = (QEvent::Type)QEvent::registerEventType();
+
+static DWORD WINAPI qtAppProc(CONST LPVOID lpParam)
+{
+  _set_se_translator(SeTranslator);
+
+  CoreData* d = reinterpret_cast<CoreData*>(lpParam);
+  DWORD code = 0;
+
+  {
+    Application app;
+    _log(QString("qApp thread id: %1").arg(GetCurrentThreadId()));
+
+    _assert( ! d->pAgent );
+    d->pAgent.reset(new CoreAgent());
+
+    d->appSem.unlock();
+
+    _log("Enter qApp EventLoop");
+    code = app.exec();
+    _log("Leave qApp EventLoop");
+
+    // deinitialize
+    SemaphoreLocker(&d->appSem);
+    d->pAgent.reset();
+  }
+
+  _log(QString("Result code: %1").arg(code));
+  return code;
+}
 
 CoreEvent* CorePayload::createEvent()
 {
@@ -42,60 +70,20 @@ void Core::processPayload_helper(CoreEvent* event)
   // process incoming messages during wait
   while ( e.wait(3) == WAIT_TIMEOUT )
   {
-    MSG msg;
-    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) != 0)
-    {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-
-    Sleep(3);
+    dispatchMessages();
   }
+
   _log("Payload is processed");
 }
 
-DWORD WINAPI qtAppProc(CONST LPVOID lpParam)
-{
-  _set_se_translator(SeTranslator);
-
-  CoreData* d = reinterpret_cast<CoreData*>(lpParam);
-  DWORD code = 0;
-
-  {
-    Application app;
-    _log(QString("qApp thread id: %1").arg(GetCurrentThreadId()));
-
-    _assert( ! d->pAgent );
-    d->pAgent.reset(new CoreAgent());
-
-    d->hSemApp.unlock();
-
-    _log("Enter qApp EventLoop");
-    code = app.exec();
-    _log("Leave qApp EventLoop");
-
-    // deinitialize
-    SemaphoreLocker(&d->hSemApp);
-    d->pAgent.reset();
-  }
-
-  _log(QString("Result code: %1").arg(code));
-  return code;
-}
-
 void Core::dispatchMessages()
-{ // process incoming messages during wait
-  while (d->hSemApp.lock(3) == WAIT_TIMEOUT)
+{
+  MSG msg;
+  while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) != 0)
   {
-    MSG msg;
-    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) != 0)
-    {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
+    TranslateMessage(&msg);
+    DispatchMessage(&msg);
   }
-
-  d->hSemApp.unlock();
 }
 
 Core::Core()
@@ -108,7 +96,7 @@ Core::Core()
     delete pCore;
   });
 
-  d->iWinCount = 0;
+  d->winCount = 0;
 
   // enable loading Qt plugins
   QCoreApplication::setLibraryPaths(QStringList() << Loader::dirByPath(Loader::pathThis()));
@@ -194,6 +182,11 @@ bool Core::startApplication()
 {
   CoreLocker locker;
 
+  // make Qt mark TOTALCMD thread as QCoreApplicationPrivate::theMainThread,
+  // QApplication will post warnings to the console but at least there will be no crash
+  // at plugin unloading, and no leaking threads
+  QObject obj;
+
   if (qApp)
   {
     return true;
@@ -201,17 +194,12 @@ bool Core::startApplication()
 
   _log("Starting qApp...");
 
-  d->hSemApp.lock();
+  d->appSem.lock();
 
-  // App thread
-  HANDLE hQtThread = CreateThread(NULL, 0, &qtAppProc, d.get(), 0, NULL);
-  _assert(hQtThread);
-  if ( hQtThread )
-  {
-    CloseHandle(hQtThread);
-    // wait until qApp will be initialized
-    SemaphoreLocker(&d->hSemApp);
-  }
+  d->appThread.start(&qtAppProc, d.get());
+
+  // wait until qApp will be initialized
+  SemaphoreLocker(&d->appSem);
 
   _assert(qApp);
   _log(qApp ? "qApp is succesfully started" : "qApp was not started");
@@ -228,39 +216,42 @@ void Core::stopApplication()
     return;
   }
 
-  _assert( ! d->iWinCount );
+  _assert( ! d->winCount );
   _log("Stopping qApp...");
 
-  QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
+  // stop the app
+  auto payloadStop = createCorePayload([&]()
+  {
+    QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
+  });
+  processPayload_helper(payloadStop.createEvent());
 
-  while (qApp)
+  while (d->appThread.wait(3) == WAIT_TIMEOUT)
   {
     dispatchMessages();
-    Sleep(3);
   }
 
-  // be sure that qApp thread is finished
-  dispatchMessages();
+  // FIXME: there is a racing condition here with qt_adopted_thread_watcher
 
   _log("qApp is stopped");
 }
 
 void Core::increaseWinCounter()
 {
-  ++d->iWinCount;
-  _log(QString("Total window count: ") + QString::number(d->iWinCount));
+  ++d->winCount;
+  _log(QString("Total window count: ") + QString::number(d->winCount));
 }
 
 void Core::decreaseWinCounter()
 {
-  --d->iWinCount;
-  _log(QString("Total window count: ") + QString::number(d->iWinCount));
+  --d->winCount;
+  _log(QString("Total window count: ") + QString::number(d->winCount));
 }
 
 int Core::winCounter() const
 {
   _assert(g_coreMutex.isLocked());
-  return d->iWinCount;
+  return d->winCount;
 }
 
 bool CoreAgent::event(QEvent* e)

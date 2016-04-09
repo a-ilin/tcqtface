@@ -7,8 +7,8 @@
 #include "wlx_interfaces.h"
 
 // plugin loader
-std::shared_ptr<Loader> g_pLoader;
-AtomicMutex g_loaderMutex;
+static std::shared_ptr<Loader> g_pLoader;
+static AtomicMutex g_loaderMutex;
 
 class LibraryMap
 {

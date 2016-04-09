@@ -1,11 +1,9 @@
 # tcqtface
 ###### Qt interface for Total Commander (c)
 
-This plugin is designed for plugin writers who interested in development 
-of TC plugins based on Qt framework.
+This plugin is designed for plugin writers who interested in development of TC plugins based on Qt framework.
 
-Currently this plugin supports TC WLX (Lister) integration.
-Other plugin types are not supported.
+Currently this plugin supports TC WLX (Lister) integration. Other plugin types are not supported.
 
 ## How to use
 1. Build the core plugin module **listerqt**:
@@ -35,6 +33,7 @@ There is an example plugin that renders Qt .ui files: qtuiviewer. **It's highly 
 Some of precompiled binaries can be found at 'releases' tab: [link](https://github.com/a-ilin/tcqtface/releases).
 
 ## Known Issues
-At this time there is no common solution to keep both 32 and 64 bit
-binaries (wlx, wlx64) at the same directory because of Qt framework
-shares the same names of it's libraries. However this can be implemented in future.
+Static linkage with Qt is preferred because of dynamic linkage has a set of issues.
+  - There is no common solution to keep both 32 and 64 bit binaries (wlx, wlx64) at the same directory because of Qt framework shares the same names of it's libraries.
+  - Qt doesn't unloads it's plugins and therefore some Qt DLL stays in memory while others are unloaded. This leads to crash on plugin reload [link](http://www.hexblog.com/?p=991).
+  - Static linkage often saves the size of a plugin and speeds up the loading.

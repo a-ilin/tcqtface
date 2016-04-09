@@ -6,6 +6,7 @@
 #include "core.h"
 #include "event.h"
 #include "semaphore.h"
+#include "thread.h"
 
 #include <QEvent>
 #include <QObject>
@@ -24,8 +25,12 @@ protected:
 struct CoreData
 {
   std::unique_ptr<CoreAgent> pAgent;
-  Semaphore hSemApp;   // sync app create/destroy
-  QAtomicInt iWinCount; // counter of active windows
+  // sync app create/destroy
+  Semaphore appSem;
+  // application thread
+  Thread appThread;
+  // counter of active windows
+  QAtomicInt winCount;
 };
 
 extern QEvent::Type EventCoreType;

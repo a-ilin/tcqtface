@@ -10,7 +10,6 @@
 
 #include <string>
 
-#include <QSettings>
 #include <QString>
 
 // filename without path
@@ -76,10 +75,11 @@ void _assert_ex_helper(const QString& str);
 #define _assert(expr) _assert_ex( expr, #expr )
 
 // settings
-class AppSet : public QSettings
+class AppSet
 {
 public:
-  AppSet();
+  static QString readString(const QString& key, const QString& defValue = QString());
+  static uint readInt(const QString& key, int defValue = -1);
 };
 
 
