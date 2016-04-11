@@ -30,14 +30,13 @@ static DWORD WINAPI qtAppProc(CONST LPVOID lpParam)
     _assert( ! d->pAgent );
     d->pAgent.reset(new CoreAgent());
 
-    d->appSem.unlock();
+    d->appStartEvent.set();
 
     _log("Enter qApp EventLoop");
     code = app.exec();
     _log("Leave qApp EventLoop");
 
     // deinitialize
-    SemaphoreLocker(&d->appSem);
     d->pAgent.reset();
   }
 
@@ -98,8 +97,10 @@ Core::Core()
 
   d->winCount = 0;
 
+#ifndef STATIC_BUILD
   // enable loading Qt plugins
   QCoreApplication::setLibraryPaths(QStringList() << Loader::dirByPath(Loader::pathThis()));
+#endif
 
   _log("Core created");
 }
@@ -109,7 +110,9 @@ Core::~Core()
   _assert(g_coreMutex.isLocked());
   stopApplication();
 
+#ifndef STATIC_BUILD
   QCoreApplication::setLibraryPaths(QStringList());
+#endif
 
   _assert( ! d->pAgent );
   _log("Core destroyed");
@@ -194,12 +197,10 @@ bool Core::startApplication()
 
   _log("Starting qApp...");
 
-  d->appSem.lock();
-
   d->appThread.start(&qtAppProc, d.get());
 
   // wait until qApp will be initialized
-  SemaphoreLocker(&d->appSem);
+  d->appStartEvent.wait();
 
   _assert(qApp);
   _log(qApp ? "qApp is succesfully started" : "qApp was not started");

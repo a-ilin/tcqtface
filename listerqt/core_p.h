@@ -26,7 +26,7 @@ struct CoreData
 {
   std::unique_ptr<CoreAgent> pAgent;
   // sync app create/destroy
-  Semaphore appSem;
+  Event appStartEvent;
   // application thread
   Thread appThread;
   // counter of active windows
