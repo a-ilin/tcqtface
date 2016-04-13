@@ -29,6 +29,8 @@ nmake install
 ## Examples
 There is an example plugin that renders Qt .ui files: qtuiviewer. **It's highly recommended to have a quick view over the code!**
 
+![Screenshot](/qtuiviewer/screenshot.png?raw=true)
+
 ## Binaries
 Some of precompiled binaries can be found at 'releases' tab: [link](https://github.com/a-ilin/tcqtface/releases).
 
