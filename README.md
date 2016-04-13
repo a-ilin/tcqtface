@@ -42,3 +42,6 @@ Static linkage with Qt is preferred because of dynamic linkage has a set of issu
   - There is no common solution to keep both 32 and 64 bit binaries (wlx, wlx64) at the same directory because of Qt framework shares the same names of it's libraries.
   - Qt doesn't unloads it's plugins and therefore some Qt DLL stays in memory while others are unloaded. This leads to crash on plugin reload: [details](http://www.hexblog.com/?p=991).
   - Static linkage often saves the size of a plugin and speeds up the loading.
+
+## License
+[**MIT**](/LICENSE?raw=true)
