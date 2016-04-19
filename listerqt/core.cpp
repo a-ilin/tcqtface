@@ -169,7 +169,7 @@ void Core::processPayload(CorePayload& payload)
     processPayload_helper(payload.createEvent());
 
     // process pending events
-    auto eventPoster = createCorePayload([&]()
+    auto eventPoster = createCorePayload([]()
     {
       QCoreApplication::processEvents();
       QCoreApplication::sendPostedEvents();

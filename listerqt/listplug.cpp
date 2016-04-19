@@ -268,8 +268,12 @@ int listPrint(Manager& manager, HWND ListWin, const QString& FileToPrint, const 
   auto payload = createCorePayload([&]()
   {
     ParentWlxWindow* parent = ParentWlxWindow::getByHandle(ListWin);
-    QMarginsF margins(Margins->left, Margins->top, Margins->right, Margins->bottom);
-    result = parent->childWindow()->print(FileToPrint, DefPrinter, PrintFlags, margins);
+    _assert(parent);
+    if (parent)
+    {
+      QMarginsF margins(Margins->left, Margins->top, Margins->right, Margins->bottom);
+      result = parent->childWindow()->print(FileToPrint, DefPrinter, PrintFlags, margins);
+    }
   });
 
   manager.core()->processPayload(payload);
