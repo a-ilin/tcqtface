@@ -143,10 +143,25 @@ void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListCloseWindow)(HWND hWnd)
       _assert(parent);
       if (parent)
       {
+        IAbstractWlxWindow* child = parent->childWindow();
+        _assert(child);
+
+        if (child)
+        {
+            QWidget* w = child->widget();
+            _assert(w);
+            if (w)
+            {
+                bool closed = w->close();
+                _assert(closed);
+            }
+        }
+
+        bool closed = parent->close();
+        _assert(closed);
+
         _log(QString("Window destroyed. Parent: 0x") + QString::number((quint64)parent, 16)
              + QString(", HWND: 0x") + QString::number((quint64)parent->winId(), 16));
-
-        parent->close();
 
         pDeleted = parent;
       }
