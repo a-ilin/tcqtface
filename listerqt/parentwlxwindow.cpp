@@ -112,6 +112,7 @@ void ParentWlxWindow::setChildWindow(IAbstractWlxWindow* childWindow)
     layout()->addWidget(w);
     m_childWindow->initEmbedded();
     _log("Window is embedded");
+    w->show();
   }
   else
   {
@@ -220,4 +221,32 @@ void ParentWlxWindow::onFirstShowTimer()
 void ParentWlxWindow::setListerOptions(int itemtype, int value) const
 {
   PostMessage((HWND)nativeParent(), WM_COMMAND, MAKELONG(value, itemtype),(LPARAM)winId());
+}
+
+QString ParentWlxWindow::listerTitle() const
+{
+  if (HWND hParent = (HWND)nativeParent())
+  {
+    QVector<TCHAR> wStrTitle(GetWindowTextLength(hParent) + 1);
+    GetWindowText(hParent, wStrTitle.data(), wStrTitle.size());
+    QString title = QString::fromWCharArray(wStrTitle.constData());
+    return title;
+  }
+
+  _assert_ex(false, "Parent handle is not accessible");
+  return QString();
+}
+
+void ParentWlxWindow::setListerTitle(const QString& title)
+{
+  if (HWND hParent = (HWND)nativeParent())
+  {
+    QVector<TCHAR> wStrTitle(title.size() + 1);
+    title.toWCharArray(wStrTitle.data());
+    SetWindowText(hParent, wStrTitle.constData());
+  }
+  else
+  {
+    _assert_ex(false, "Parent handle is not accessible");
+  }
 }

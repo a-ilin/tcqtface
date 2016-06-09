@@ -32,7 +32,11 @@ public:
   // IParentWlxWindow
   void setKeyboardExclusive(bool enable) Q_DECL_OVERRIDE { m_keyboardExclusive = enable; }
   bool isKeyboardExclusive() const Q_DECL_OVERRIDE { return m_keyboardExclusive; }
+
   void setListerOptions(int itemtype, int value) const Q_DECL_OVERRIDE;
+
+  QString listerTitle() const;
+  void setListerTitle(const QString& title);
 
 protected:
   void releaseChild();

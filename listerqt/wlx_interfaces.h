@@ -81,6 +81,10 @@ public:
   // Set Lister window options (see TC Lister Plugin docs, section WM_COMMAND)
   virtual void setListerOptions(int itemtype, int value) const = 0;
 
+  // Change Lister window title
+  virtual QString listerTitle() const = 0;
+  virtual void setListerTitle(const QString& title) = 0;
+
   // Widget of parent window
   QWidget* widget() const
   { return dynamic_cast<QWidget*>(const_cast<IParentWlxWindow*>(this)); }
