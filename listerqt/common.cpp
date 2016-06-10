@@ -17,7 +17,7 @@ static AtomicMutex g_logMutex;
 // log file name
 static QString g_logFile;
 // temporary log buffer
-static QByteArray g_logBuffer;
+static QList<QPair<int, QByteArray> > g_logBuffer;
 // max log facility
 static int g_logFacility = LogDebug;
 // show message box on assert
@@ -60,9 +60,9 @@ QByteArray _log_string_helper(const QString& msg, const char* file,
 }
 
 // write to log
-void _log_ex_helper(const QByteArray& buf)
+void _log_ex_helper(const QByteArray& buf, int facility)
 {
-  if (buf.isEmpty())
+  if ( buf.isEmpty() || (facility > g_logFacility) )
   { // nothing to do
     return;
   }
@@ -80,7 +80,7 @@ void _log_ex_helper(const QByteArray& buf)
   }
   else
   {
-    g_logBuffer.append(buf);
+    g_logBuffer.append(qMakePair(facility, buf));
   }
 }
 
@@ -113,7 +113,12 @@ void _set_default_params(ListDefaultParamStruct* dps)
   }
   else
   { // flush the log buffer
-    _log_ex_helper(g_logBuffer);
+    QList<QPair<int, QByteArray> > logBuffer;
+    std::swap(logBuffer, g_logBuffer);
+    for (const QPair<int, QByteArray>& msg : logBuffer)
+    {
+      _log_ex_helper(msg.second, msg.first);
+    }
   }
   g_logBuffer.clear();
 }

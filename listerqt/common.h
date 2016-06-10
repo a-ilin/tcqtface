@@ -50,9 +50,9 @@ QByteArray _log_string_helper(const QString& msg, const char* file,
   _log_string_helper(msg, __FILE__, \
                      __FUNCTION__, TOSTRING(__LINE__), bTimeStamp, facility)
 
-void _log_ex_helper(const QByteArray& buf);
+void _log_ex_helper(const QByteArray& buf, int facility);
 
-#define _log_ex(msg, facility) _log_ex_helper(_log_string(msg, true, facility))
+#define _log_ex(msg, facility) _log_ex_helper(_log_string(msg, true, facility), facility)
 #define _log(msg) _log_ex(msg, LogDebug)
 #define _log_line _log(QString())
 
