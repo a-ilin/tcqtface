@@ -13,6 +13,7 @@
 #define QT_WA(unicode, ansi) unicode
 #endif
 
+
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
   ParentWlxWindow* tcmdWin = ParentWlxWindow::getByHandle(hWnd);
@@ -22,19 +23,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPara
     WNDPROC proc = tcmdWin->isKeyboardExclusive() ? tcmdWin->origWndProc() :
                                                     tcmdWin->listerWndProc();
 
-    QSet<UINT> keyEvents;
-    keyEvents.insert(WM_KEYDOWN);
-    keyEvents.insert(WM_KEYUP);
-    keyEvents.insert(WM_DEADCHAR);
-    keyEvents.insert(WM_SYSDEADCHAR);
-    keyEvents.insert(WM_CHAR);
-    keyEvents.insert(WM_UNICHAR);
-    keyEvents.insert(WM_HOTKEY);
-
-    if (keyEvents.contains(Msg))
+    if (WM_KEYDOWN == Msg)
     {
-      // reload
-      switch(wParam)
+      switch (wParam)
       {
       case VK_F2:
         tcmdWin->reloadWidget();
@@ -49,7 +40,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPara
     }
     else
     {
-      // if Msg is not WM_KEYUP then proc should be ListerWndProc
       proc = tcmdWin->listerWndProc();
     }
 
@@ -59,11 +49,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPara
   return E_FAIL;
 }
 
-// returns S_OK for all events
-static LRESULT CALLBACK DummyWndProc(HWND /*hWnd*/, UINT /*Msg*/, WPARAM /*wParam*/, LPARAM /*lParam*/)
-{
-  return S_OK;
-}
 
 ParentWlxWindow::ParentWlxWindow(const Interface& keeper, WId hParentWin) :
   QWidget(),
