@@ -331,21 +331,7 @@ void _set_default_params(ListDefaultParamStruct* dps);
 void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSetDefaultParams)(ListDefaultParamStruct* dps)
 {
   _log_line;
-  Manager manager = MANAGER;
-
   _set_default_params(dps);
-
-  auto payload = createCorePayload([&]()
-  {
-    Interface iface = manager.iface();
-    _assert(iface);
-    if (iface)
-    {
-      iface->setDefaultParams(dps);
-    }
-  });
-
-  manager.core()->processPayload(payload);
 }
 
 static HBITMAP listGetPreviewBitmap(Manager& manager, const QString& FileToLoad,

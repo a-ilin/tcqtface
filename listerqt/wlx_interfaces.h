@@ -36,11 +36,72 @@ typedef IAbstractWlxPlugin* (CALLTYPE_EXPORT *GetWlxPluginFunc)();
 EXTERN_EXPORT IAbstractWlxPlugin* GetWlxPlugin();
 #endif
 
+// string conversion
+#ifndef TOSTRING
+#define TOSTRING2(x) #x
+#define TOSTRING(x) TOSTRING2(x)
+#endif
+
+/* Logging can be customized via lsplugin.ini file
+ * Supported entries:
+ * LogFile     (default LogNone): full back-slashed path to the log file
+ * LogFacility                  : specify minimum facility to be written into the log file
+ */
+
+enum LogFacility
+{
+  LogNone      = 0,  // no logging
+  LogCritical  = 1,  // log critical info/assert failures and (optionally) show messageboxes
+  LogDebug     = 2   // log all info
+};
+
+// Internal core with useful methods
+class IWlxCore
+{
+public:
+    virtual ~IWlxCore() {}
+
+    // return path to module by memory addr
+    virtual QString pathModuleByAddr(void* addr) const = 0;
+
+    // get directory from complete path
+    virtual QString dirByPath(const QString& path) const = 0;
+
+    // return the path to the calling module
+    QString pathToThisModule() const
+    {
+        volatile static TCHAR* localVar = (TCHAR*)0x12345;
+        return pathModuleByAddr(&localVar);
+    }
+
+    // for logging use macro below instead of those functions
+    virtual void __log(const QByteArray& buf, int facility) = 0;
+    virtual QByteArray __log_string(const QString& msg,
+                                    const char* file, const char* function, const char* line,
+                                    bool bTimeStamp, int facility) = 0;
+    virtual void __assert(const QString& msg) = 0;
+};
+
+// Macro for logging
+#define WLX_LOG(iwlxcore, msg, facility) \
+    (iwlxcore)->__log((iwlxcore)->__log_string((msg), __FILE__, __FUNCTION__, TOSTRING(__LINE__), true, (facility)), (facility))
+#define WLX_ASSERT_EX(iwlxcore, expr, msg) \
+    if (0 == (expr)) { \
+        WLX_LOG((iwlxcore), QString("ASSERT: ") + QString(msg), LogCritical); \
+        (iwlxcore)->__assert(QString(msg)); \
+    }
+#define WLX_ASSERT(iwlxcore, expr) WLX_ASSERT_EX(iwlxcore, expr, #expr)
+
+
 // Base plugin's interface class
 class IAbstractWlxPlugin
 {
 public:
   virtual ~IAbstractWlxPlugin() {}
+
+  // setup the plugin for core
+  virtual void initCore(IWlxCore* core)
+  { Q_UNUSED(core); }
 
   // Create a plugin window
   virtual IAbstractWlxWindow* createWindow(IParentWlxWindow* parent) const

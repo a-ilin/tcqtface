@@ -14,8 +14,9 @@ class LoaderPrivate;
 class Loader
 {
 public:
-  // get plugin interface for module that contains addr
-  Interface iface(Library& hModule);
+  // get plugin interface for module that contains addr,
+  // set pCreated if the interface is newly created
+  Interface iface(Library& hModule, bool* pCreated);
 
   // returns if library contains a module handle specified by addr
   bool containsLibrary(void* addr) const;

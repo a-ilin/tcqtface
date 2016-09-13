@@ -19,13 +19,16 @@ SOURCES += \
   application.cpp \
   seexception.cpp \
   core.cpp \
-  common.cpp
+  common.cpp \
+  manager.cpp \
+  wlxcore.cpp
 
 HEADERS += \
   listplug.h \
   wlx_interfaces.h \
   parentwlxwindow.h \
   common.h \
+  wlxcore.h \
   libraryloader.h \
   application.h \
   seexception.h \

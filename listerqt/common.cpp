@@ -24,6 +24,9 @@ static int g_logFacility = LogDebug;
 static bool g_msgOnAssert = true;
 // settings file name
 static QString g_setFileName;
+// default params struct
+static ListDefaultParamStruct g_defaultParams;
+ListDefaultParamStruct* g_pDefaultParams = &g_defaultParams;
 
 // create a single log string from multiple components
 QByteArray _log_string_helper(const QString& msg, const char* file,
@@ -121,6 +124,8 @@ void _set_default_params(ListDefaultParamStruct* dps)
     }
   }
   g_logBuffer.clear();
+
+  memcpy(&g_defaultParams, dps, sizeof(ListDefaultParamStruct));
 }
 
 void _assert_ex_helper(const QString& str)

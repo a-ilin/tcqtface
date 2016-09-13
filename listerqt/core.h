@@ -12,6 +12,8 @@ struct CoreData;
 class CoreEvent;
 class CorePayload;
 
+class IWlxCore;
+
 class Core
 {
   Q_DISABLE_COPY(Core)
@@ -22,6 +24,9 @@ public:
   void increaseWinCounter();
   void decreaseWinCounter();
   int winCounter() const;
+
+  // return WlxCore instance
+  IWlxCore* wlxCore() const;
 
   static std::shared_ptr<Core> i();
   static bool isExists();

@@ -182,7 +182,7 @@ Loader::~Loader()
   _log("LibraryLoader destroyed");
 }
 
-Interface Loader::iface(Library& pModule)
+Interface Loader::iface(Library& pModule, bool* pCreated)
 {
   Q_D(Loader);
 
@@ -224,6 +224,12 @@ Interface Loader::iface(Library& pModule)
     const char* qtVersion = (const char*)GetProcAddress((HMODULE)pModule.get(), "_qt_version");
     _assert(qtVersion);
     _log(QString("Qt version: ") + QString(qtVersion + sizeof("_qt_version=") - 1));
+
+    *pCreated = true;
+  }
+  else
+  {
+    *pCreated = false;
   }
 
   return pWlx;

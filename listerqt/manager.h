@@ -8,39 +8,16 @@
 class Manager
 {
 public:
-  Manager(void* retAddr)
-    : m_pLoader(Loader::i())
-    , m_pModule(Loader::handle(retAddr))
-    , m_pCore(Core::i())
-  {
-    _assert(m_pModule);
-  }
-
-  ~Manager()
-  {
-    destroyCore();
-    destroyLoader();
-  }
+  Manager(void* retAddr);
+  ~Manager();
 
   std::shared_ptr<Loader>& loader() { return m_pLoader; }
-  Interface iface() { return m_pLoader->iface(m_pModule); }
-
+  Interface iface();
   std::shared_ptr<Core>& core() { return m_pCore; }
 
 private:
-  void destroyCore()
-  {
-    m_pCore.reset();
-    CoreLocker coreLocker;
-    Core::destroy();
-  }
-
-  void destroyLoader()
-  {
-    m_pLoader.reset();
-    LoaderLocker loaderLocker;
-    Loader::destroy();
-  }
+  void destroyCore();
+  void destroyLoader();
 
 private:
   std::shared_ptr<Loader> m_pLoader;

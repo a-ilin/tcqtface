@@ -7,6 +7,7 @@
 #include "event.h"
 #include "semaphore.h"
 #include "thread.h"
+#include "wlxcore.h"
 
 #include <QEvent>
 #include <QObject>
@@ -25,6 +26,7 @@ protected:
 struct CoreData
 {
   std::unique_ptr<CoreAgent> pAgent;
+  std::unique_ptr<IWlxCore> pWlxCore;
   // sync app create/destroy
   Event appStartEvent;
   // application thread

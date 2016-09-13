@@ -12,12 +12,10 @@
 
 #include <QString>
 
+#include "wlx_interfaces.h"
+
 // filename without path
 #define __FILENAME__(x) (strrchr(x, '\\') ? (strrchr(x, '\\') + 1) : (x))
-
-// string conversion
-#define TOSTRING2(x) #x
-#define TOSTRING(x) TOSTRING2(x)
 
 static inline
 QByteArray _TQ_helper(const QString& str) {
@@ -35,14 +33,6 @@ QByteArray _TQ_helper(const QString& str) {
 static inline QString _toString(const char* s) { return QString(s); }
 static inline QString _toString(const wchar_t* s) { return QString::fromWCharArray(s); }
 
-
-// logging
-enum LogFacility
-{
-  LogNone      = 0,  // no logging
-  LogCritical  = 1,  // log assert failures and show messageboxes
-  LogDebug     = 2   // log all info
-};
 QByteArray _log_string_helper(const QString& msg, const char* file,
                     const char* function, const char* line,
                     bool bTimeStamp, int facility);
@@ -81,6 +71,5 @@ public:
   static QString readString(const QString& key, const QString& defValue = QString());
   static uint readInt(const QString& key, int defValue = -1);
 };
-
 
 #endif // COMMON_H

@@ -8,6 +8,7 @@
 #include "seexception.h"
 
 #include <QCoreApplication>
+#include <QPixmapCache>
 #include <QThread>
 
 // global objects
@@ -35,6 +36,9 @@ static DWORD WINAPI qtAppProc(CONST LPVOID lpParam)
     _log("Enter qApp EventLoop");
     code = app.exec();
     _log("Leave qApp EventLoop");
+
+    // TC can keep plugins loaded so need to clean Qt caches
+    QPixmapCache::clear();
 
     // deinitialize
     d->pAgent.reset();
@@ -96,6 +100,8 @@ Core::Core()
   });
 
   d->winCount = 0;
+
+  d->pWlxCore.reset(new WlxCore());
 
 #ifndef STATIC_BUILD
   // enable loading Qt plugins
@@ -253,6 +259,11 @@ int Core::winCounter() const
 {
   _assert(g_coreMutex.isLocked());
   return d->winCount;
+}
+
+IWlxCore* Core::wlxCore() const
+{
+  return d->pWlxCore.get();
 }
 
 bool CoreAgent::event(QEvent* e)
