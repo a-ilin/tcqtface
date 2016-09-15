@@ -130,7 +130,7 @@ void _set_default_params(ListDefaultParamStruct* dps)
 
 void _assert_ex_helper(const QString& str)
 {
-  if (g_logFacility >= LogCritical)
+  if (g_msgOnAssert && (g_logFacility >= LogCritical))
   {
     _messagebox_ex(str, "tcqtface ASSERTION FAILED!", MB_ICONERROR | MB_OK);
   }
