@@ -158,7 +158,8 @@ class IAbstractWlxWindow
 public:
   virtual ~IAbstractWlxWindow() {}
 
-  // Called after embedding the window into parent widget
+  // Called after embedding the window into parent widget,
+  // this method could be called after loadFile
   virtual void initEmbedded() {}
 
   // Load file, return LISTPLUGIN_OK or LISTPLUGIN_ERROR

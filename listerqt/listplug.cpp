@@ -40,8 +40,6 @@ HWND createWindow(Manager& manager, HWND hLister, const QString& fileName, int f
         parent->setChildWindow(iwlx);
         parent->show();
 
-        iwlx->initEmbedded();
-
         if (iwlx->loadFile(fileName, flags) == LISTPLUGIN_OK)
         {
           _log(QString("Window created. Parent: 0x") + QString::number((quint64)parent.get(), 16)

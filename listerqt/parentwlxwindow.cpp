@@ -213,6 +213,24 @@ void ParentWlxWindow::onFirstShowTimer()
     SetWindowLongPtr((HWND)winId(), GWLP_WNDPROC, (LONG_PTR)WndProc);
 
     m_firstShowTimer->stop();
+
+    RECT parentRect;
+    if ( GetWindowRect((HWND)nativeParent(), &parentRect) )
+    {
+      QSize sz(parentRect.right - parentRect.left + 1,
+               parentRect.bottom - parentRect.top + 1);
+      _log(QString("Resized. w: %1, h: %2").arg(sz.width()).arg(sz.height()));
+      resize(sz);
+    }
+    else
+    {
+      _assert_ex(false, QString("GetWindowRect failed for HWND: ") + QString::number((quint64)nativeParent(), 16));
+    }
+
+    if (m_childWindow)
+    {
+      m_childWindow->initEmbedded();
+    }
   }
 }
 
