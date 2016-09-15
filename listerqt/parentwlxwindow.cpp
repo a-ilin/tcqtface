@@ -4,9 +4,9 @@
 
 #include <QApplication>
 #include <QLabel>
+#include <QResizeEvent>
 #include <QSet>
 #include <QTimer>
-#include <QVBoxLayout>
 
 #if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
 #include <QWindow>
@@ -57,7 +57,8 @@ ParentWlxWindow::ParentWlxWindow(const Interface& keeper, WId hParentWin) :
   m_origWndProc((WNDPROC)GetWindowLongPtr((HWND)winId(), GWLP_WNDPROC)),
   m_listerWndProc(NULL),
   m_firstShowTimer(new QTimer(this)),
-  m_childWindow(NULL)
+  m_childWindow(NULL),
+  m_childWidget(NULL)
 {
   // keep the pointer to this into GWLP_USERDATA
   SetWindowLongPtr((HWND)winId(), GWLP_USERDATA, (LONG_PTR)this);
@@ -65,12 +66,6 @@ ParentWlxWindow::ParentWlxWindow(const Interface& keeper, WId hParentWin) :
   setNativeParent(hParentWin);
 
   setAttribute(Qt::WA_DeleteOnClose, true);
-
-  // layout
-  QVBoxLayout* lay = new QVBoxLayout(this);
-  lay->setContentsMargins(0,0,0,0);
-  lay->setSpacing(0);
-  setLayout(lay);
 }
 
 ParentWlxWindow::~ParentWlxWindow()
@@ -88,28 +83,34 @@ ParentWlxWindow::~ParentWlxWindow()
 void ParentWlxWindow::setChildWindow(IAbstractWlxWindow* childWindow)
 {
   releaseChild();
+  _assert( ! m_childWidget );
+  _assert( ! m_childWindow );
 
-  QWidget* w = childWindow->widget();
-  _assert(w);
-  if (w)
+  if (childWindow)
   {
-    m_childWindow = childWindow;
-    layout()->addWidget(w);
-    m_childWindow->initEmbedded();
-    _log("Window is embedded");
-    w->show();
-  }
-  else
-  {
-    layout()->addWidget(new QLabel(QString("Cannot cast IAbstractWlxWindow* to QWidget*")));
-    _log("Window is NOT embedded. Cannot cast to QWidget*.");
+    m_childWidget = childWindow->widget();
+    _assert(m_childWidget);
+    if (m_childWidget)
+    {
+      _assert(m_childWidget->parent() == this);
+
+      m_childWindow = childWindow;
+      _log("Window is embedded");
+    }
+    else
+    {
+      m_childWidget = new QLabel(QString("Cannot cast IAbstractWlxWindow* to QWidget*"));
+      _log("Window is NOT embedded. Cannot cast to QWidget*.");
+    }
+
+    m_childWidget->resize(size());
   }
 }
 
 ParentWlxWindow* ParentWlxWindow::getByHandle(HWND hwnd)
 {
-   QWidget* p = (QWidget*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-   return qobject_cast<ParentWlxWindow*> (p);
+  QWidget* p = (QWidget*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+  return qobject_cast<ParentWlxWindow*> (p);
 }
 
 void ParentWlxWindow::reloadWidget()
@@ -123,15 +124,17 @@ void ParentWlxWindow::reloadWidget()
 
 void ParentWlxWindow::releaseChild()
 {
+  if (m_childWidget)
+  {
+    bool closed = m_childWidget->close();
+    _assert(closed);
+
+    m_childWidget->deleteLater();
+    m_childWidget = NULL;
+  }
+
   if (m_childWindow)
   {
-    // clear layout
-    while(layout()->count())
-    {
-      layout()->takeAt(0);
-    }
-
-    m_childWindow->widget()->deleteLater();
     _log(QString("Child window destroyed: ") + QString::number((quint64)m_childWindow, 16));
     m_childWindow = NULL;
   }
@@ -170,6 +173,16 @@ void ParentWlxWindow::showEvent(QShowEvent* e)
 
   connect(m_firstShowTimer, &QTimer::timeout, this, &ParentWlxWindow::onFirstShowTimer);
   m_firstShowTimer->start(200);
+}
+
+void ParentWlxWindow::resizeEvent(QResizeEvent* e)
+{
+  QWidget::resizeEvent(e);
+
+  if (m_childWidget)
+  {
+    m_childWidget->resize(e->size());
+  }
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(5,0,0)

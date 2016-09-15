@@ -44,7 +44,8 @@ protected:
   void setNativeParent(WId hParentWin);
   WId nativeParent() const;
 
-  void showEvent(QShowEvent *);
+  void showEvent(QShowEvent* e);
+  void resizeEvent(QResizeEvent* e);
 
 #if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
   bool nativeEvent(const QByteArray &eventType, void *message, long *result);
@@ -64,7 +65,9 @@ protected:
   WNDPROC m_listerWndProc;
 
   QTimer* m_firstShowTimer;
+
   IAbstractWlxWindow* m_childWindow;
+  QWidget* m_childWidget;
 };
 
 #endif // TCMDPARENTWINDOW_H

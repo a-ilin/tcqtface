@@ -38,16 +38,22 @@ HWND createWindow(Manager& manager, HWND hLister, const QString& fileName, int f
       if (iwlx && iwlx->widget())
       {
         parent->setChildWindow(iwlx);
+        parent->show();
+
+        iwlx->initEmbedded();
 
         if (iwlx->loadFile(fileName, flags) == LISTPLUGIN_OK)
         {
-          parent->show();
-
           _log(QString("Window created. Parent: 0x") + QString::number((quint64)parent.get(), 16)
                + QString(", HWND: 0x") + QString::number((quint64)parent->winId(), 16));
 
           hWnd = (HWND)parent->winId();
           pWnd = parent.release();
+        }
+        else
+        {
+          _log(QString("Cannot load file. Parent: 0x") + QString::number((quint64)parent.get(), 16));
+          parent->hide();
         }
       }
       else
@@ -59,10 +65,10 @@ HWND createWindow(Manager& manager, HWND hLister, const QString& fileName, int f
   },
   [&]()
   {
-    if (hWnd)
-    {
-      manager.core()->increaseWinCounter();
-    }
+      if (hWnd)
+      {
+        manager.core()->increaseWinCounter();
+      }
   });
 
   manager.core()->processPayload(payload);
@@ -96,7 +102,12 @@ static int listLoadNext(Manager& manager, HWND PluginWin, const QString& FileToL
     _assert(parent);
     if (parent)
     {
-      result = parent->childWindow()->loadFile(FileToLoad, ShowFlags);
+      IAbstractWlxWindow* child = parent->childWindow();
+      _assert(child);
+      if(child)
+      {
+          result = child->loadFile(FileToLoad, ShowFlags);
+      }
     }
   });
 
@@ -143,19 +154,7 @@ void CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListCloseWindow)(HWND hWnd)
       _assert(parent);
       if (parent)
       {
-        IAbstractWlxWindow* child = parent->childWindow();
-        _assert(child);
-
-        if (child)
-        {
-            QWidget* w = child->widget();
-            _assert(w);
-            if (w)
-            {
-                bool closed = w->close();
-                _assert(closed);
-            }
-        }
+        parent->setChildWindow(NULL);
 
         bool closed = parent->close();
         _assert(closed);
@@ -214,7 +213,12 @@ static int listSearchText(Manager& manager, HWND ListWin, const QString& SearchS
     _assert(parent);
     if (parent)
     {
-      result = parent->childWindow()->searchText(SearchString, SearchParameter);
+      IAbstractWlxWindow* child = parent->childWindow();
+      _assert(child);
+      if(child)
+      {
+          result = child->searchText(SearchString, SearchParameter);
+      }
     }
   });
 
@@ -248,7 +252,12 @@ int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSearchDialog) (HWND ListWin, int Fin
     _assert(parent);
     if (parent)
     {
-      result = parent->childWindow()->searchDialog(FindNext);
+      IAbstractWlxWindow* child = parent->childWindow();
+      _assert(child);
+      if(child)
+      {
+        result = child->searchDialog(FindNext);
+      }
     }
   });
 
@@ -268,7 +277,12 @@ int CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListSendCommand) (HWND ListWin, int Comm
     _assert(parent);
     if (parent)
     {
-      result = parent->childWindow()->sendCommand(Command, Parameter);
+      IAbstractWlxWindow* child = parent->childWindow();
+      _assert(child);
+      if(child)
+      {
+        result = child->sendCommand(Command, Parameter);
+      }
     }
   });
 
@@ -286,8 +300,13 @@ int listPrint(Manager& manager, HWND ListWin, const QString& FileToPrint, const 
     _assert(parent);
     if (parent)
     {
-      QMarginsF margins(Margins->left, Margins->top, Margins->right, Margins->bottom);
-      result = parent->childWindow()->print(FileToPrint, DefPrinter, PrintFlags, margins);
+      IAbstractWlxWindow* child = parent->childWindow();
+      _assert(child);
+      if(child)
+      {
+        QMarginsF margins(Margins->left, Margins->top, Margins->right, Margins->bottom);
+        result = child->print(FileToPrint, DefPrinter, PrintFlags, margins);
+      }
     }
   });
 
