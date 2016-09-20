@@ -41,6 +41,14 @@ bool Application::notify(QObject* o, QEvent* e)
   {
     showException(ex.what());
   }
+  catch(const QString& s)
+  {
+    showException(s);
+  }
+  catch(const char* s)
+  {
+    showException(s);
+  }
   catch(...)
   {
     showException("Unknown Exception");
