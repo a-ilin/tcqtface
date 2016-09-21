@@ -149,10 +149,15 @@ class IParentWlxWindow
 public:
   virtual ~IParentWlxWindow() {}
 
-  // Set exclusive keyboard input,
-  // when enabled your window will receive all keyboard input, except F2 and ESC keys
+  // Enable processing all keyboard events. Default is FALSE.
+  // When enabled the plugin window will receive all keyboard input, except F2 and ESC keys.
   virtual void setKeyboardExclusive(bool enable) = 0;
   virtual bool isKeyboardExclusive() const = 0;
+
+  // Do not close the window when ESC is pressed. Default is FALSE.
+  // When enabled the plugin window will receive ESC key events.
+  virtual void setEscapeOverride(bool is) = 0;
+  virtual bool isEscapeOverride() const = 0;
 
   // Set Lister window options (see TC Lister Plugin docs, section WM_COMMAND)
   virtual void setListerOptions(int itemtype, int value) const = 0;

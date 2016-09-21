@@ -31,6 +31,9 @@ public:
   void setKeyboardExclusive(bool enable) Q_DECL_OVERRIDE { m_keyboardExclusive = enable; }
   bool isKeyboardExclusive() const Q_DECL_OVERRIDE { return m_keyboardExclusive; }
 
+  void setEscapeOverride(bool is) Q_DECL_OVERRIDE { m_escOverride = is; }
+  bool isEscapeOverride() const Q_DECL_OVERRIDE { return m_escOverride; }
+
   void setListerOptions(int itemtype, int value) const Q_DECL_OVERRIDE;
 
   QString listerTitle() const;
@@ -62,6 +65,7 @@ protected:
   Interface m_keeper;
 
   bool m_keyboardExclusive;
+  bool m_escOverride;
 
   WNDPROC m_origWndProc;
   WNDPROC m_listerWndProc;

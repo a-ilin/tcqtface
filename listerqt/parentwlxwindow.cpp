@@ -41,8 +41,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPara
         tcmdWin->reloadFile();
         break;
       case VK_ESCAPE:
-        // set proc to Lister
-        proc = listerProc;
+        // set proc to Lister if override is disabled
+        proc = tcmdWin->isEscapeOverride() ? origProc : listerProc;
         break;
       default:
         break;
@@ -64,6 +64,7 @@ ParentWlxWindow::ParentWlxWindow(const Interface& keeper, WId hParentWin) :
   QWidget(),
   m_keeper(keeper),
   m_keyboardExclusive(false),
+  m_escOverride(false),
   m_origWndProc((WNDPROC)GetWindowLongPtr((HWND)winId(), GWLP_WNDPROC)),
   m_listerWndProc(NULL),
   m_firstShowTimer(new QTimer(this)),
