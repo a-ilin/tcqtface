@@ -19,20 +19,30 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPara
   ParentWlxWindow* tcmdWin = ParentWlxWindow::getByHandle(hWnd);
   if (tcmdWin)
   {
-    // choice of WndProc
-    WNDPROC proc = tcmdWin->isKeyboardExclusive() ? tcmdWin->origWndProc() :
-                                                    tcmdWin->listerWndProc();
+    WNDPROC origProc = tcmdWin->origWndProc();
+    _assert(origProc);
+
+    // if Lister didn't subclassed the window yet use original WndProc
+    WNDPROC listerProc = tcmdWin->listerWndProc();
+    if ( ! listerProc )
+    {
+        listerProc = origProc;
+    }
+
+    // Lister hooks on some key events,
+    // original proc is needed to enable all keyboard features
+    WNDPROC proc = tcmdWin->isKeyboardExclusive() ? origProc : listerProc;
 
     if (WM_KEYDOWN == Msg)
     {
       switch (wParam)
       {
       case VK_F2:
-        tcmdWin->reloadWidget();
+        tcmdWin->reloadFile();
         break;
       case VK_ESCAPE:
         // set proc to Lister
-        proc = tcmdWin->listerWndProc();
+        proc = listerProc;
         break;
       default:
         break;
@@ -40,7 +50,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPara
     }
     else
     {
-      proc = tcmdWin->listerWndProc();
+      proc = listerProc;
     }
 
     return CallWindowProc(proc, hWnd, Msg, wParam, lParam);
@@ -57,6 +67,7 @@ ParentWlxWindow::ParentWlxWindow(const Interface& keeper, WId hParentWin) :
   m_origWndProc((WNDPROC)GetWindowLongPtr((HWND)winId(), GWLP_WNDPROC)),
   m_listerWndProc(NULL),
   m_firstShowTimer(new QTimer(this)),
+  m_firstShowTimerCounter(0),
   m_childWindow(NULL),
   m_childWidget(NULL)
 {
@@ -64,6 +75,10 @@ ParentWlxWindow::ParentWlxWindow(const Interface& keeper, WId hParentWin) :
   SetWindowLongPtr((HWND)winId(), GWLP_USERDATA, (LONG_PTR)this);
 
   setNativeParent(hParentWin);
+
+  // replace default window procedure
+  // BUG: it causes endless recursion
+  //SetWindowLongPtr((HWND)winId(), GWLP_WNDPROC, (LONG_PTR)WndProc);
 
   setAttribute(Qt::WA_DeleteOnClose, true);
 }
@@ -112,15 +127,6 @@ ParentWlxWindow* ParentWlxWindow::getByHandle(HWND hwnd)
 {
   QWidget* p = (QWidget*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
   return qobject_cast<ParentWlxWindow*> (p);
-}
-
-void ParentWlxWindow::reloadWidget()
-{
-  _assert(m_childWindow);
-  if (m_childWindow)
-  {
-    m_childWindow->reload();
-  }
 }
 
 void ParentWlxWindow::releaseChild()
@@ -174,6 +180,7 @@ void ParentWlxWindow::showEvent(QShowEvent* e)
 
   connect(m_firstShowTimer, &QTimer::timeout, this, &ParentWlxWindow::onFirstShowTimer);
   m_firstShowTimer->start(200);
+  m_firstShowTimerCounter = 0;
 }
 
 void ParentWlxWindow::resizeEvent(QResizeEvent* e)
@@ -205,13 +212,28 @@ bool ParentWlxWindow::winEvent(MSG* msg, long* /*result*/)
 
 void ParentWlxWindow::onFirstShowTimer()
 {
-  WNDPROC proc = (WNDPROC)GetWindowLongPtr((HWND)winId(), GWLP_WNDPROC);
-  if ( ( proc != m_origWndProc ) && ( ! m_listerWndProc ) )
-  {
-    m_listerWndProc = proc;
+  ++m_firstShowTimerCounter;
 
-    // replace default window procedure
-    SetWindowLongPtr((HWND)winId(), GWLP_WNDPROC, (LONG_PTR)WndProc);
+  // wait no more that 5 sec for embedding
+  const int maxWaitForEmbeddingMSecs = 1000 * 5;
+  // total waiting time is calculated via count of timer triggers,
+  // it is safe than QElapsedTimer when CPU is high loaded
+  int waitingMSecs = m_firstShowTimer->interval() * m_firstShowTimerCounter;
+
+  // TC Lister replaces the window proc with it's own,
+  // it should be replaced again to handle specific cases
+  WNDPROC proc = (WNDPROC)GetWindowLongPtr((HWND)winId(), GWLP_WNDPROC);
+  bool procChanged = ( proc != m_origWndProc ) && (proc != WndProc);
+
+  if ( procChanged || (waitingMSecs > maxWaitForEmbeddingMSecs) )
+  {
+    if (procChanged)
+    {
+      m_listerWndProc = proc;
+
+      // replace default window procedure
+      SetWindowLongPtr((HWND)winId(), GWLP_WNDPROC, (LONG_PTR)WndProc);
+    }
 
     m_firstShowTimer->stop();
 
@@ -252,5 +274,23 @@ void ParentWlxWindow::setListerTitle(const QString& title)
   else
   {
     _assert_ex(false, "Parent handle is not accessible");
+  }
+}
+
+void ParentWlxWindow::loadFile(const QString& file, int showFlags)
+{
+  _assert(m_childWindow);
+  if (m_childWindow)
+  {
+    m_childWindow->load(file, showFlags);
+  }
+}
+
+void ParentWlxWindow::reloadFile()
+{
+  _assert(m_childWindow);
+  if (m_childWindow)
+  {
+    m_childWindow->reload();
   }
 }

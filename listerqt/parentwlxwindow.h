@@ -24,8 +24,6 @@ public:
   WNDPROC origWndProc() const { return m_origWndProc; }
   WNDPROC listerWndProc() const { return m_listerWndProc; }
 
-  void reloadWidget();
-
   static ParentWlxWindow* getByHandle(HWND hwnd);
 
 public:
@@ -37,6 +35,10 @@ public:
 
   QString listerTitle() const;
   void setListerTitle(const QString& title);
+
+public slots:
+  void loadFile(const QString& file, int showFlags);
+  void reloadFile();
 
 protected:
   void releaseChild();
@@ -65,6 +67,7 @@ protected:
   WNDPROC m_listerWndProc;
 
   QTimer* m_firstShowTimer;
+  int m_firstShowTimerCounter;
 
   IAbstractWlxWindow* m_childWindow;
   QWidget* m_childWidget;

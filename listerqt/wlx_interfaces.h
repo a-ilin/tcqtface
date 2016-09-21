@@ -101,11 +101,16 @@ public:
 
   // setup the plugin for core
   virtual void initCore(IWlxCore* core)
-  { Q_UNUSED(core); }
+  {
+    Q_UNUSED(core);
+  }
 
   // Create a plugin window
   virtual IAbstractWlxWindow* createWindow(IParentWlxWindow* parent) const
-  { Q_UNUSED(parent); return NULL; }
+  {
+    Q_UNUSED(parent);
+    return NULL;
+  }
   
   // Return detect string which is used by TC, see TC docs
   // Called at plugin's first time load
@@ -114,17 +119,27 @@ public:
   // Check if the file can be opened by the plugin
   // Called each time before creating new window
   virtual bool isFileAcceptable(const QString& fileName) const
-  { Q_UNUSED(fileName); return true; }
+  {
+    Q_UNUSED(fileName);
+    return true;
+  }
 
   // Create preview for the file:
   // size: requested size of the preview
   // content: first several bytes of the file (usually 8kB)
   virtual QPixmap previewBitmap(const QString& fileName, const QSize& size, const QByteArray& content) const
-  { Q_UNUSED(fileName); Q_UNUSED(size); Q_UNUSED(content); return QPixmap(); }
+  {
+    Q_UNUSED(fileName);
+    Q_UNUSED(size);
+    Q_UNUSED(content);
+    return QPixmap();
+  }
 
   // Setup default parameters of the plugin, see TC docs
   virtual void setDefaultParams(ListDefaultParamStruct* dps)
-  { Q_UNUSED(dps); }
+  {
+    Q_UNUSED(dps);
+  }
 };
 
 
@@ -148,7 +163,9 @@ public:
 
   // Widget of parent window
   QWidget* widget() const
-  { return dynamic_cast<QWidget*>(const_cast<IParentWlxWindow*>(this)); }
+  {
+    return dynamic_cast<QWidget*>(const_cast<IParentWlxWindow*>(this));
+  }
 };
 
 
@@ -162,31 +179,58 @@ public:
   // this method could be called after loadFile
   virtual void initEmbedded() {}
 
-  // Load file, return LISTPLUGIN_OK or LISTPLUGIN_ERROR
-  virtual int loadFile(const QString& file, int showFlags)
-  { Q_UNUSED(file); Q_UNUSED(showFlags); return LISTPLUGIN_ERROR; }
-  // reload file (on F2 press)
+  // Load file
+  virtual void load(const QString& file, int showFlags)
+  {
+    Q_UNUSED(file);
+    Q_UNUSED(showFlags);
+  }
+
+  // Reload file (on F2 press)
   virtual void reload() {}
 
   // See TC Lister Plugin docs for description of those
 
   virtual int print(const QString& file, const QString& printer, int flags, const QMarginsF& margins)
-  { Q_UNUSED(file); Q_UNUSED(printer); Q_UNUSED(flags); Q_UNUSED(margins); return LISTPLUGIN_ERROR; }
+  {
+    Q_UNUSED(file);
+    Q_UNUSED(printer);
+    Q_UNUSED(flags);
+    Q_UNUSED(margins);
+    return LISTPLUGIN_ERROR;
+  }
 
   virtual int searchText(const QString& str, int searchParameter)
-  { Q_UNUSED(str); Q_UNUSED(searchParameter); return LISTPLUGIN_ERROR; }
+  {
+    Q_UNUSED(str);
+    Q_UNUSED(searchParameter);
+    return LISTPLUGIN_ERROR;
+  }
 
   virtual int searchDialog(int findNext)
-  { Q_UNUSED(findNext); return LISTPLUGIN_ERROR; }
+  {
+    Q_UNUSED(findNext);
+    return LISTPLUGIN_ERROR;
+  }
 
   virtual int sendCommand(int command, int parameter)
-  { Q_UNUSED(command); Q_UNUSED(parameter); return LISTPLUGIN_ERROR; }
+  {
+    Q_UNUSED(command);
+    Q_UNUSED(parameter);
+    return LISTPLUGIN_ERROR;
+  }
 
+  // cast IAbstractWlxWindow* to QWidget*
   QWidget* widget() const
-  { return dynamic_cast<QWidget*>(const_cast<IAbstractWlxWindow*>(this)); }
+  {
+    return dynamic_cast<QWidget*>(const_cast<IAbstractWlxWindow*>(this));
+  }
 
+  // cast parent QWidget* to IParentWlxWindow*
   IParentWlxWindow* parentWlx() const
-  { return dynamic_cast<IParentWlxWindow*>(widget()->parent()); }
+  {
+    return dynamic_cast<IParentWlxWindow*>(widget()->parent());
+  }
 };
 
 #endif // WLX_INTERFACES_H

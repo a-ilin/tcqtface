@@ -11,14 +11,32 @@
 #include <intrin.h>
 #include <memory>
 
+#include <QCoreApplication>
 #include <QtWin>
+#include <QThread>
 
 #pragma intrinsic(_ReturnAddress)
 
 #define MANAGER Manager(_ReturnAddress())
 
+static void callWlxLoadFile(ParentWlxWindow* parent, const QString& fileName, int flags)
+{
+  // should be called inside qApp thread
+  _assert(QThread::currentThread() == qApp->thread());
 
-HWND createWindow(Manager& manager, HWND hLister, const QString& fileName, int flags)
+  _assert(parent);
+  if (parent)
+  {
+    // check that signature is the same at compile-time
+    void (ParentWlxWindow::*loadFileFunc)(const QString&, int) = &ParentWlxWindow::loadFile;
+    Q_UNUSED(loadFileFunc);
+
+    bool ok = parent->metaObject()->invokeMethod(parent, "loadFile", Qt::QueuedConnection, Q_ARG(QString, fileName), Q_ARG(int, flags));
+    _assert(ok);
+  }
+}
+
+static HWND createWindow(Manager& manager, HWND hLister, const QString& fileName, int ShowFlags)
 {
   HWND hWnd = NULL;
   ParentWlxWindow* pWnd = NULL;
@@ -40,19 +58,14 @@ HWND createWindow(Manager& manager, HWND hLister, const QString& fileName, int f
         parent->setChildWindow(iwlx);
         parent->show();
 
-        if (iwlx->loadFile(fileName, flags) == LISTPLUGIN_OK)
-        {
-          _log(QString("Window created. Parent: 0x") + QString::number((quint64)parent.get(), 16)
-               + QString(", HWND: 0x") + QString::number((quint64)parent->winId(), 16));
+        _log(QString("Window created. Parent: 0x") + QString::number((quint64)parent.get(), 16)
+             + QString(", HWND: 0x") + QString::number((quint64)parent->winId(), 16));
 
-          hWnd = (HWND)parent->winId();
-          pWnd = parent.release();
-        }
-        else
-        {
-          _log(QString("Cannot load file. Parent: 0x") + QString::number((quint64)parent.get(), 16));
-          parent->hide();
-        }
+        // postpone load file event
+        callWlxLoadFile(parent.get(), fileName, ShowFlags);
+
+        hWnd = (HWND)parent->winId();
+        pWnd = parent.release();
       }
       else
       {
@@ -69,7 +82,7 @@ HWND createWindow(Manager& manager, HWND hLister, const QString& fileName, int f
       }
   });
 
-  manager.core()->processPayload(payload);
+  manager.core()->processPayload(payload, false);
 
   if ( ! hWnd )
   {
@@ -90,26 +103,33 @@ HWND CALLTYPE_EXPORT FUNC_WRAPPER_EXPORT(ListLoadW)(HWND ParentWin, WCHAR* FileT
   return createWindow(MANAGER, ParentWin, _toString(FileToLoad), ShowFlags);
 }
 
-static int listLoadNext(Manager& manager, HWND PluginWin, const QString& FileToLoad, int ShowFlags)
+static int listLoadNext(Manager& manager, HWND PluginWin, const QString& fileName, int ShowFlags)
 {
   int result = LISTPLUGIN_ERROR;
 
   auto payload = createCorePayload([&]()
   {
-    ParentWlxWindow* parent = ParentWlxWindow::getByHandle(PluginWin);
-    _assert(parent);
-    if (parent)
+    Interface iface = manager.iface();
+    _assert(iface);
+    if ( iface && iface->isFileAcceptable(fileName) )
     {
-      IAbstractWlxWindow* child = parent->childWindow();
-      _assert(child);
-      if(child)
-      {
-          result = child->loadFile(FileToLoad, ShowFlags);
-      }
+        ParentWlxWindow* parent = ParentWlxWindow::getByHandle(PluginWin);
+        _assert(parent);
+        if (parent)
+        {
+          IAbstractWlxWindow* child = parent->childWindow();
+          _assert(child);
+          if(child)
+          {
+            // postpone load file event
+            callWlxLoadFile(parent, fileName, ShowFlags);
+            result = LISTPLUGIN_OK;
+          }
+        }
     }
   });
 
-  manager.core()->processPayload(payload);
+  manager.core()->processPayload(payload, false);
   return result;
 }
 

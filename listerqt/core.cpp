@@ -167,7 +167,7 @@ void Core::unlock()
   g_coreMutex.unlock();
 }
 
-void Core::processPayload(CorePayload& payload)
+void Core::processPayload(CorePayload& payload, bool processEvents)
 {
   if (startApplication() && payload.preprocess())
   {
@@ -175,13 +175,16 @@ void Core::processPayload(CorePayload& payload)
     processPayload_helper(payload.createEvent());
 
     // process pending events
-    auto eventPoster = createCorePayload([]()
+    if (processEvents)
     {
-      QCoreApplication::processEvents();
-      QCoreApplication::sendPostedEvents();
-    });
+      auto eventPoster = createCorePayload([]()
+      {
+        QCoreApplication::processEvents();
+        QCoreApplication::sendPostedEvents();
+      });
 
-    processPayload_helper(eventPoster.createEvent());
+      processPayload_helper(eventPoster.createEvent());
+    }
 
     payload.postprocess();
   }

@@ -19,7 +19,7 @@ class Core
   Q_DISABLE_COPY(Core)
 
 public:
-  void processPayload(CorePayload& payload);
+  void processPayload(CorePayload& payload, bool processEvents = true);
 
   void increaseWinCounter();
   void decreaseWinCounter();
