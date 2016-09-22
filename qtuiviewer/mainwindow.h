@@ -25,7 +25,7 @@ class MainWindow : public QWidget, public IAbstractWlxWindow
 public:
   MainWindow(IParentWlxWindow* parent);
 
-  int loadFile(const QString& file, int showFlags) Q_DECL_OVERRIDE;
+  void load(const QString& file, int showFlags) Q_DECL_OVERRIDE;
   void reload() Q_DECL_OVERRIDE;
 
   int print(const QString& file, const QString& printer, int flags, const QMarginsF& margins) Q_DECL_OVERRIDE;

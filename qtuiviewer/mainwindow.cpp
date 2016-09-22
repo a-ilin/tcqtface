@@ -109,12 +109,11 @@ MainWindow::MainWindow(IParentWlxWindow* parent) :
   parent->setKeyboardExclusive(true);
 }
 
-int MainWindow::loadFile(const QString& file, int showFlags)
+void MainWindow::load(const QString& file, int showFlags)
 {
   m_filePath = file;
   m_showFlags = showFlags;
   reload();
-  return LISTPLUGIN_OK;
 }
 
 void MainWindow::reload()
