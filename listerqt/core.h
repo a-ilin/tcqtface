@@ -49,6 +49,8 @@ public:
   void decreaseWinCounter();
   int winCounter() const;
 
+  void updateDpiAwareness(HWND hParentWin);
+
   // return WlxCore instance
   IWlxCore* wlxCore() const;
 

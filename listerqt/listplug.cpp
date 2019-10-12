@@ -73,6 +73,7 @@ static HWND createWindow(Manager& manager, HWND hLister, const QString& fileName
     _assert(iface);
     if ( iface && iface->isFileAcceptable(fileName) )
     {
+      Core::i()->updateDpiAwareness(hLister);
       std::unique_ptr<ParentWlxWindow> parent(new ParentWlxWindow(iface, (WId)hLister));
       // it's better to not use unique_ptr because of ownership is transferred to parent
       IAbstractWlxWindow* iwlx = iface->createWindow(parent.get());

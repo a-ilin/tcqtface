@@ -288,6 +288,22 @@ int Core::winCounter() const
   return d->winCount;
 }
 
+void Core::updateDpiAwareness(HWND hParentWin)
+{
+    _assert(QThread::currentThread() == qApp->thread());
+
+    DPI_AWARENESS_CONTEXT contextWin = GetWindowDpiAwarenessContext(hParentWin);
+    DPI_AWARENESS awarenessWin = GetAwarenessFromDpiAwarenessContext(contextWin);
+    DPI_AWARENESS_CONTEXT contextThread = GetThreadDpiAwarenessContext();
+    DPI_AWARENESS awarenessThread = GetAwarenessFromDpiAwarenessContext(contextThread);
+
+    if (awarenessWin != awarenessThread) {
+        _log(QString("qApp thread DPI awareness changed: ") + QString::number(awarenessWin));
+        SetThreadDpiAwarenessContext(contextWin);
+        SetThreadDpiHostingBehavior(DPI_HOSTING_BEHAVIOR_MIXED);
+    }
+}
+
 IWlxCore* Core::wlxCore() const
 {
   return d->pWlxCore.get();

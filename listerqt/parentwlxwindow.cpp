@@ -184,7 +184,9 @@ void ParentWlxWindow::setNativeParent(WId hParentWin)
 #if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
   QWindow* window = windowHandle();
   window->setProperty("_q_embedded_native_parent_handle", hParentWin ? (WId)hParentWin : QVariant());
-  SetParent((HWND)winId(), (HWND)hParentWin);
+  if(!SetParent((HWND)winId(), (HWND)hParentWin)) {
+      _log_ex(QString("Native parent cannot be set. Error: 0x") + QString::number(GetLastError(), 16), LogCritical);
+  }
   window->setFlags(Qt::FramelessWindowHint);
 #else
   SetParent(winId(), (HWND)hParentWin);
