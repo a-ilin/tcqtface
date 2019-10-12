@@ -1,5 +1,5 @@
 # tcqtface
-###### Qt interface for Total Commander (c)
+###### Qt API for Total Commander (c) WLX extensions
 
 This plugin is designed for plugin writers who interested in development of TC plugins based on Qt framework.
 
@@ -7,7 +7,6 @@ Currently this plugin supports TC WLX (Lister) integration. Other plugin types a
 
 ## How to use
 1. Build the core plugin module **listerqt**:
-
 ```bat
 cd listerqt
 qmake INSTALL_PATH=c:\SomeDirectory
@@ -38,7 +37,7 @@ There is an example plugin that renders Qt .ui files: qtuiviewer. **It's highly 
 Some of precompiled binaries can be found at [releases](https://github.com/a-ilin/tcqtface/releases).
 
 ## Known Issues
-Static linkage with Qt is preferred because of dynamic linkage has a set of issues.
+Static linkage with Qt is preferred because of dynamic linkage has a set of issues:
   - There is no common solution to keep both 32 and 64 bit binaries (wlx, wlx64) at the same directory because of Qt framework shares the same names of it's libraries.
   - Qt doesn't unloads it's plugins and therefore some Qt DLL stays in memory while others are unloaded. This leads to crash on plugin reload: [details](http://www.hexblog.com/?p=991).
   - Static linkage often saves the size of a plugin and speeds up the loading.

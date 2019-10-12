@@ -4,6 +4,7 @@ release*
 debug*
 Makefile*
 *.pro.user
+*.pro.user.*
 *~
 *.qm
 *.log
